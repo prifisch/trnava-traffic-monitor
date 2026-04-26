@@ -20,7 +20,9 @@ jobs:
           python-version: '3.9'
 
       - name: Instalacia kniznic
-        run: pip install pandas openpyxl requests
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas openpyxl requests pytz
 
       - name: Spustenie skriptu
         env:
