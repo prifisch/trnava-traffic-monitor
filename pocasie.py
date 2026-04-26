@@ -5,7 +5,7 @@ import time
 import os
 
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
-OPENWEATHER_KEY = os.getenv("OPENWEATHER_KEY")
+WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
 CITY = "Trnava"
 # Definujeme trasy pre dopravu (Štart -> Cieľ Bernolákova brána)
