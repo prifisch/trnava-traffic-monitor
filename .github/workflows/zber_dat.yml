@@ -22,7 +22,7 @@ jobs:
       - name: Instalacia kniznic
         run: |
           python -m pip install --upgrade pip
-          run: pip install pandas openpyxl requests pytz matplotlib
+          pip install pandas openpyxl requests pytz matplotlib
 
       - name: Spustenie skriptu
         env:
