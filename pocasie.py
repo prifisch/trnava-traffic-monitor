@@ -3,6 +3,7 @@ import pandas as pd
 from datetime import datetime
 import time
 import os
+import pytz
 
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
@@ -15,8 +16,9 @@ TRASY = {
 }
 
 def zber_dat():
-    cas_zberu = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    print(f"Spúšťam zber dát: {cas_zberu}")
+zona = pytz.timezone('Europe/Bratislava')
+cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
+print(f"Spúšťam zber dát (Trnavský čas): {cas_zberu}")
 
     # 1. ZBER POČASIA
     weather_url = f"http://api.openweathermap.org/data/2.5/weather?q={CITY}&appid={WEATHER_API_KEY}&units=metric&lang=sk"
