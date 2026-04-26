@@ -4,7 +4,6 @@ from datetime import datetime
 import time
 import os
 
-# Namiesto priameho textu použijeme toto:
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 OPENWEATHER_KEY = os.getenv("OPENWEATHER_KEY")
 
