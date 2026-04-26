@@ -2,10 +2,11 @@ import requests
 import pandas as pd
 from datetime import datetime
 import time
+import os
 
-# --- KONFIGURÁCIA ---
-WEATHER_API_KEY = "92bdaa444400a3fca72ae016c8d4ed8a"
-TOMTOM_KEY = "yNhdI7sE16j0DIl5UXgoe95ZtVNglapu"
+# Namiesto priameho textu použijeme toto:
+TOMTOM_KEY = os.getenv("TOMTOM_KEY")
+OPENWEATHER_KEY = os.getenv("OPENWEATHER_KEY")
 
 CITY = "Trnava"
 # Definujeme trasy pre dopravu (Štart -> Cieľ Bernolákova brána)
