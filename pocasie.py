@@ -9,18 +9,22 @@ TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
 def ziskaj_parkovanie():
-    """Získa počet voľných miest na parkovisku Rybníková od mesta Trnava"""
     try:
-        # Oficiálne API mesta Trnava pre parkoviská
         url = "https://opendata.trnava.sk/api/v1/parkings"
         response = requests.get(url, timeout=10)
         data = response.json()
         
-        # Hľadáme parkovisko Rybníková (ID býva v systéme stabilné)
         for p in data.get('features', []):
             prop = p.get('properties', {})
-            if "Rybníková" in prop.get('name', ''):
-                return prop.get('free_places', 0)
+            name = prop.get('name', '')
+            free = prop.get('free_places')
+            
+            # Toto nám v logoch Actions ukáže, čo API reálne posiela
+            print(f"DEBUG: Parkovisko: {name}, Volne: {free}")
+            
+            if "Rybníková" in name:
+                # Ak je hodnota None (nie nula), vrátime 0, aby Excel nezlyhal
+                return free if free is not None else 0
         return 0
     except Exception as e:
         print(f"Chyba pri parkovaní: {e}")
