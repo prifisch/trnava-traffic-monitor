@@ -1,0 +1,37 @@
+name: Zber dat dopravy Trnava
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Spustí sa každú celú hodinu
+  workflow_dispatch: # Umožní ti spustiť to manuálne tlačidlom
+
+jobs:
+  run-collector:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Dôležité, aby mohol GitHub zapísať dáta do Excelu
+    steps:
+      - name: Checkout kodu
+        uses: actions/checkout@v3
+
+      - name: Nastavenie Pythonu
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Instalacia kniznic
+        run: pip install pandas openpyxl requests
+
+      - name: Spustenie skriptu
+        env:
+          TOMTOM_KEY: ${{ secrets.TOMTOM_KEY }}
+          OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
+        run: python pocasie.py
+
+      - name: Ulozenie dat spat do repozitara
+        run: |
+          git config --global user.name 'GitHub Action'
+          git config --global user.email 'action@github.com'
+          git add data_trnava_komplet.xlsx
+          git commit -m "Automaticky update dat" || exit 0
+          git push
