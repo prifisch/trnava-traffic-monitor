@@ -8,36 +8,29 @@ import pytz
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
-# Presne kalibrované body na hlavných cestách (vjazdy do TT)
 VJAZDY = {
-    "Zdrzanie_Zelenec (min)": "48.3582,17.5831",
-    "Zdrzanie_Bucany (min)": "48.4014,17.6212",
-    "Zdrzanie_Zavar (min)": "48.3758,17.6465",
-    "Zdrzanie_Biely_Kostol (min)": "48.3711,17.5512",
-    "Zdrzanie_Sucha (min)": "48.3885,17.5312",
-    "Zdrzanie_Spacince (min)": "48.4055,17.6012",
-    "Zdrzanie_Ruzindol (min)": "48.3585,17.5355",
-    "Zdrzanie_Boleraz (min)": "48.4215,17.5311"
+    "Zdrzanie_Zelenec (min)": "48.3615,17.5855", # Pri vjazde do mesta
+    "Zdrzanie_Bucany (min)": "48.3932,17.6105", # Pri kruháči pri obchvate
+    "Zdrzanie_Zavar (min)": "48.3735,17.6255",  # Pri PSA / Logistickom parku
+    "Zdrzanie_Boleraz (min)": "48.4025,17.5511" # Pri Trstínskej ceste
 }
 
 def ziskaj_zdrzanie(nazov, suradnice):
     try:
-        # Pridali sme zoom level 12 a potvrdili absolute flow
         url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={suradnice}"
         res = requests.get(url, timeout=10).json()
         
-        # DEBUG VÝPIS - uvidíš ho v Actions
         flow = res.get('flowSegmentData', {})
-        current_speed = flow.get('currentSpeed', 0)
-        free_flow = flow.get('freeFlowSpeed', 0)
-        delay = flow.get('delaySeconds', 0) / 60
+        current = flow.get('currentSpeed', 1)
+        free = flow.get('freeFlowSpeed', 1)
         
-        print(f"DEBUG {nazov}: Rýchlosť {current_speed}/{free_flow}, Zdržanie: {delay} min")
+        # Výpočet plynulosti v percentách (100% = úplne voľno)
+        plynulost = round((current / free) * 100, 2)
         
-        return round(delay, 2)
-    except Exception as e:
-        print(f"Chyba TomTom ({nazov}): {e}")
-        return 0
+        print(f"DEBUG {nazov}: Plynulosť {plynulost}% ({current}/{free})")
+        return plynulost
+    except:
+        return 100  # Ak zlyhá, predpokladáme voľnú cestu
 
 def ziskaj_parkovanie():
     try:
