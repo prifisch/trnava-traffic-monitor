@@ -32,19 +32,23 @@ def ziskaj_plynulost(nazov, suradnice):
     except:
         return 100
 
-def ziskaj_parkovanie():
+def ziskaj_vsetky_parkoviska():
+    vysledok = {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
     try:
         url = "https://opendata.trnava.sk/api/v1/parkings"
         headers = {'User-Agent': 'Mozilla/5.0'}
         res = requests.get(url, headers=headers, timeout=10).json()
         for p in res.get('features', []):
             prop = p.get('properties', {})
-            if "Rybníková" in prop.get('name', ''):
-                val = prop.get('free_places')
-                return val if val is not None else "N/A"
-        return "N/A"
+            meno = prop.get('name', '')
+            volne = prop.get('free_places')
+            
+            if "Rybníková" in meno: vysledok["Rybníková"] = volne if volne is not None else "N/A"
+            elif "Hospodárska" in meno: vysledok["Hospodárska"] = volne if volne is not None else "N/A"
+            elif "Kollárova" in meno: vysledok["Kollárova"] = volne if volne is not None else "N/A"
+        return vysledok
     except:
-        return "N/A"
+        return vysledok
 
 def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
@@ -60,12 +64,15 @@ def zber_dat():
         "Počasie": w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
     }
 
-    # 2. Doprava - TU BOLA CHYBA V PREDCHÁDZAJÚCOM KÓDE
+    # 2. Doprava
     for nazov, suradnice in VJAZDY.items():
         novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
 
-    # 3. Parkovanie
-    novy_riadok["volne_rybnikova"] = ziskaj_parkovanie()
+    # 3. Parkovanie (pridáme 3 stĺpce)
+    parkoviska = ziskaj_vsetky_parkoviska()
+    novy_riadok["P_Rybnikova"] = parkoviska["Rybníková"]
+    novy_riadok["P_Hospodarska"] = parkoviska["Hospodárska"]
+    novy_riadok["P_Kollarova"] = parkoviska["Kollárova"]
 
     # --- DEFINÍCIA PORADIA PRE EXCEL ---
     poradie = [
@@ -73,25 +80,24 @@ def zber_dat():
         "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
         "Zdrzanie_Nitrianska (min)", "Zdrzanie_Hrnciarovce (min)", "Zdrzanie_Biely_Kostol (min)",
         "Zdrzanie_Sucha (min)", "Zdrzanie_Spacince (min)", "Zdrzanie_Ruzindol (min)",
-        "Zdrzanie_Boleraz (min)", "volne_rybnikova"
+        "Zdrzanie_Boleraz (min)", "P_Rybnikova", "P_Hospodarska", "P_Kollarova"
     ]
 
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        stare_zle = ['cas', 'teplota', 'pocasie', 'zdrzanie_min']
-        df = df.drop(columns=[c for c in stare_zle if c in df.columns], errors='ignore')
+        # Odstránime starý stĺpec "volne_rybnikova", ak tam ešte je
+        df = df.drop(columns=['volne_rybnikova'], errors='ignore')
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
         df = pd.DataFrame([novy_riadok])
 
     for col in poradie:
-        if col not in df.columns:
-            df[col] = None
+        if col not in df.columns: df[col] = None
             
     df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    # --- VIZUÁLNY DASHBOARD (HTML) ---
+    # --- DASHBOARD (HTML) ---
     df_web = df.tail(20).copy()
 
     def ofarbi_plynulost(val):
@@ -103,9 +109,10 @@ def zber_dat():
         return val
 
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
-    ciste_nazvy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
+    park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
+    ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
+    ciste_nazvy_park = ["Rybníková", "Hospodárska", "Kollárova"]
 
-    # Generovanie riadkov tabuľky
     rows_html = ""
     for _, row in df_web.iterrows():
         rows_html += "<tr>"
@@ -116,13 +123,12 @@ def zber_dat():
         for col in vjazdy_cols:
             rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
         
-        p_val = row['volne_rybnikova']
-        p_display = f'<span class="badge bg-light text-dark border">{p_val}</span>' if p_val != "N/A" else '<span class="text-muted small">N/A</span>'
-        rows_html += f"<td>{p_display}</td>"
+        for col in park_cols:
+            p_val = row[col]
+            p_display = f'<span class="badge bg-light text-dark border">{p_val}</span>' if p_val != "N/A" else '<span class="text-muted small">N/A</span>'
+            rows_html += f"<td>{p_display}</td>"
         rows_html += "</tr>"
 
-    cols_count = len(vjazdy_cols)
-    
     html_table = f"""
     <table class="table table-hover table-striped border text-center align-middle">
         <thead class="table-dark">
@@ -130,11 +136,12 @@ def zber_dat():
                 <th rowspan="2" class="align-middle">Čas zberu</th>
                 <th rowspan="2" class="align-middle">Teplota</th>
                 <th rowspan="2" class="align-middle">Počasie</th>
-                <th colspan="{cols_count}" class="border-bottom">Plynulosť dopravy (%)</th>
-                <th rowspan="2" class="align-middle">Parkovisko</th>
+                <th colspan="{len(vjazdy_cols)}" class="border-bottom">Plynulosť dopravy (%)</th>
+                <th colspan="3" class="border-bottom">Voľné parkoviská</th>
             </tr>
             <tr>
-                {"".join([f"<th>{n}</th>" for n in ciste_nazvy])}
+                {"".join([f"<th>{n}</th>" for n in ciste_nazvy_vjazdy])}
+                {"".join([f"<th>{n}</th>" for n in ciste_nazvy_park])}
             </tr>
         </thead>
         <tbody>
@@ -154,33 +161,23 @@ def zber_dat():
             body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
             .container-fluid {{ background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 98%; }}
             h2 {{ color: #1a2a6c; font-weight: 800; }}
-            .table {{ font-size: 0.82rem; }}
-            th {{ font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }}
-            .badge {{ font-weight: 600; width: 55px; }}
-            .badge.bg-light {{ width: auto; }}
+            .table {{ font-size: 0.78rem; }}
+            th {{ font-weight: 700; font-size: 0.65rem; text-transform: uppercase; }}
+            .badge {{ font-weight: 600; width: 50px; }}
+            .badge.bg-light {{ width: auto; min-width: 35px; }}
         </style>
     </head>
     <body class="p-2 p-md-4">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
                 <div>
-                    <h2>🚗 Trnava Traffic Monitor</h2>
-                    <p class="text-muted small">Live dashboard vjazdov do Trnavy</p>
+                    <h2>🚗 Trnava Smart Dashboard</h2>
+                    <p class="text-muted small">Doprava a parkovanie v reálnom čase</p>
                 </div>
-                <div class="mt-2 mt-md-0">
-                    <span class="badge bg-dark w-auto p-2">Aktualizácia: {cas_zberu}</span>
-                </div>
+                <span class="badge bg-dark w-auto p-2">Aktualizácia: {cas_zberu}</span>
             </div>
             <div class="table-responsive">
                 {html_table}
-            </div>
-            <div class="mt-4 p-3 bg-light border rounded-3 text-center">
-                <div class="d-flex gap-3 flex-wrap justify-content-center">
-                    <span class="badge bg-success w-auto">90-100% Plynulá</span>
-                    <span class="badge bg-warning text-dark w-auto">60-89% Zhustená</span>
-                    <span class="badge bg-danger w-auto">pod 60% Zápcha</span>
-                    <span class="badge bg-light text-dark border w-auto">N/A - Dáta nedostupné</span>
-                </div>
             </div>
         </div>
     </body>
@@ -188,8 +185,6 @@ def zber_dat():
     """
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
-    
-    print(f"Zber úspešný: {cas_zberu}")
 
 if __name__ == "__main__":
     zber_dat()
