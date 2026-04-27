@@ -91,10 +91,9 @@ def zber_dat():
     df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-# --- VIZUÁLNY TUNING (HTML) ---
+# --- VIZUÁLNY TUNING (OPRAVENÝ) ---
     df_web = df.tail(20).copy()
 
-    # Funkcia na farbičky
     def ofarbi_plynulost(val):
         if isinstance(val, (int, float)):
             if val >= 90: color = "success"
@@ -103,42 +102,49 @@ def zber_dat():
             return f'<span class="badge bg-{color}">{val}%</span>'
         return val
 
-    # Definujeme stĺpce, ktoré budeme upravovať
+    # Stĺpce zdržania (vjazdy)
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
     
-    # 1. Vyčistíme názvy miest pre podhlavičku (napr. "Zdrzanie_Zelenec (min)" -> "Zelenec")
-    ciste_nazvy = []
-    for col in df_web.columns:
-        if "Zdrzanie_" in col:
-            mesto = col.replace("Zdrzanie_", "").replace(" (min)", "")
-            ciste_nazvy.append(mesto)
-        else:
-            ciste_nazvy.append(col)
+    # Príprava čistých názvov pre hlavičku
+    ciste_nazvy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
 
-    # 2. Aplikujeme farby na dáta
+    # Aplikácia farieb len na vjazdy
     for col in vjazdy_cols:
         df_web[col] = df_web[col].apply(ofarbi_plynulost)
 
-    # 3. Vygenerujeme HTML s dvojitou hlavičkou
-    # Rozdelíme stĺpce na tie pred "zdržaním", samotné zdržania a tie po nich
+    # RUČNÉ GENEROVANIE RIADKOV TABUĽKY (Aby to sedelo do stĺpcov)
+    rows_html = ""
+    for _, row in df_web.iterrows():
+        rows_html += "<tr>"
+        rows_html += f"<td>{row['Čas zberu']}</td>"
+        rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
+        rows_html += f"<td>{row['Počasie']}</td>"
+        
+        # Pridáme všetky vjazdy jeden po druhom
+        for col in vjazdy_cols:
+            rows_html += f"<td>{row[col]}</td>"
+        
+        rows_html += f"<td>{row['volne_rybnikova']}</td>"
+        rows_html += "</tr>"
+
     cols_count = len(vjazdy_cols)
     
     html_table = f"""
-    <table class="table table-hover table-striped border text-center">
+    <table class="table table-hover table-striped border text-center align-middle">
         <thead class="table-dark">
             <tr>
                 <th rowspan="2" class="align-middle">Čas zberu</th>
                 <th rowspan="2" class="align-middle">Teplota</th>
                 <th rowspan="2" class="align-middle">Počasie</th>
-                <th colspan="{cols_count}" class="border-bottom">Zdržanie (Plynulosť dopravy %)</th>
+                <th colspan="{cols_count}" class="border-bottom">Plynulosť dopravy (%)</th>
                 <th rowspan="2" class="align-middle">Parkovisko</th>
             </tr>
             <tr>
-                {"".join([f"<th>{n}</th>" for n in ciste_nazvy if n not in ["Čas zberu", "Teplota (°C)", "Počasie", "volne_rybnikova"]])}
+                {"".join([f"<th>{n}</th>" for n in ciste_nazvy])}
             </tr>
         </thead>
         <tbody>
-            {df_web.to_html(index=False, header=False, escape=False, border=0)}
+            {rows_html}
         </tbody>
     </table>
     """
@@ -151,29 +157,33 @@ def zber_dat():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ background-color: #f8f9fa; font-family: sans-serif; }}
-            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }}
-            h2 {{ color: #2c3e50; font-weight: bold; }}
-            .table {{ font-size: 0.82rem; vertical-align: middle; }}
-            th {{ font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }}
+            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }}
+            .container-fluid {{ background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 98%; }}
+            h2 {{ color: #1a2a6c; font-weight: 800; letter-spacing: -1px; }}
+            .table {{ font-size: 0.85rem; }}
+            th {{ font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }}
+            .badge {{ font-weight: 600; width: 60px; }}
         </style>
     </head>
     <body class="p-2 p-md-4">
         <div class="container-fluid">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
                 <div>
-                    <h2>🚗 Trnava Traffic Dashboard</h2>
+                    <h2>🚗 Trnava Traffic Monitor</h2>
+                    <p class="text-muted small">Live analýza vjazdov do mesta Trnava</p>
                 </div>
-                <span class="badge bg-secondary p-2">Posledná aktualizácia: {cas_zberu}</span>
+                <div class="text-end">
+                    <span class="badge bg-dark w-auto p-2">Posledná aktualizácia: {cas_zberu}</span>
+                </div>
             </div>
             <div class="table-responsive">
                 {html_table}
             </div>
-            <div class="mt-4 p-3 bg-light border rounded">
+            <div class="mt-4 p-3 bg-light border rounded-3">
                 <div class="d-flex gap-3 flex-wrap justify-content-center">
-                    <span class="badge bg-success">90-100% Plynulá</span>
-                    <span class="badge bg-warning text-dark">60-89% Zhustená</span>
-                    <span class="badge bg-danger">pod 60% Zápcha</span>
+                    <span class="badge bg-success w-auto">90-100% Plynulá</span>
+                    <span class="badge bg-warning text-dark w-auto">60-89% Zhustená</span>
+                    <span class="badge bg-danger w-auto">pod 60% Zápcha</span>
                 </div>
             </div>
         </div>
