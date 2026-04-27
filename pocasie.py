@@ -170,9 +170,15 @@ def zber_dat():
                 </div>
 
                 <div id="map" class="view-section">
-                    <h2 class="fw-bold mb-4">Dopravná mapa (Google)</h2>
+                    <h2 class="fw-bold mb-4">Dopravná mapa mesta</h2>
                     <div class="card-custom">
-                        <iframe width="100%" height="600" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42436.6578647585!2d17.5855!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" style="border:0;" allowfullscreen></iframe>
+                        <iframe 
+                            width="100%" 
+                            height="600" 
+                            src="https://www.google.com/maps?q=Trnava&layer=t&z=13&output=embed" 
+                            style="border:0;" 
+                            allowfullscreen>
+                        </iframe>
                     </div>
                 </div>
 
