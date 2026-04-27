@@ -54,14 +54,18 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 1. Počasie
-    w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric"
+    # 1. Počasie (Pridané &lang=sk pre slovenčinu)
+    w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric&lang=sk"
     w_data = requests.get(w_url).json()
     
+    pocasie_text = w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
+    # Malá úprava: prvé písmeno veľké
+    pocasie_text = pocasie_text.capitalize()
+
     novy_riadok = {
         "Čas zberu": cas_zberu,
         "Teplota (°C)": w_data['main']['temp'] if 'main' in w_data else 0,
-        "Počasie": w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
+        "Počasie": pocasie_text
     }
 
     # 2. Doprava
