@@ -180,7 +180,7 @@ def zber_dat():
                             loading="lazy"
                             allowfullscreen
                             referrerpolicy="no-referrer-when-downgrade"
-                            src="https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=Trnava&destination=Trnava&mode=driving">
+                            src=f"https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=Trnava,Slovakia&destination=Trnava,Slovakia&mode=driving"
                         </iframe>
                     </div>
                     <p class="mt-2 small text-muted">
