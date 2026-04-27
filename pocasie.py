@@ -170,15 +170,19 @@ def zber_dat():
                 </div>
 
                 <div id="map" class="view-section">
-                    <h2 class="fw-bold mb-4">Dopravná mapa mesta</h2>
-                    <div class="card-custom">
+                    <h2 class="fw-bold mb-4">Aktuálna dopravná situácia</h2>
+                    <div class="card-custom" style="height: 650px;">
                         <iframe 
                             width="100%" 
-                            height="600" 
-                            src="https://www.google.com/maps?q=Trnava&layer=t&z=13&output=embed" 
+                            height="100%" 
+                            frameborder="0" 
                             style="border:0;" 
+                            src="https://www.google.com/maps/embed/v1/view?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&center=48.3775,17.5883&zoom=13&maptype=roadmap&layer=traffic" 
                             allowfullscreen>
                         </iframe>
+                    </div>
+                    <div class="mt-3 small text-muted">
+                        <i class="bi bi-info-circle me-1"></i> Mapa zobrazuje živé dáta o hustote premávky. Zelená (plynulá), Oranžová (spomalená), Červená (zápchy).
                     </div>
                 </div>
 
