@@ -8,7 +8,7 @@ import pytz
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
-# Skalibrované body bližšie k mestu (semafory/kruháče)
+# Skalibrované body bližšie k mestu
 VJAZDY = {
     "Zdrzanie_Zelenec (min)": "48.3615,17.5855",
     "Zdrzanie_Bucany (min)": "48.3932,17.6105",
@@ -18,8 +18,8 @@ VJAZDY = {
     "Zdrzanie_Spacince (min)": "48.4055,17.6012",
     "Zdrzanie_Ruzindol (min)": "48.3585,17.5355",
     "Zdrzanie_Boleraz (min)": "48.4025,17.5511",
-    "Zdrzanie_Nitrianska (min)": "48.3725,17.6055",  # Vjazd od D1/Nitry
-    "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"  # Vjazd od Senca
+    "Zdrzanie_Nitrianska (min)": "48.3725,17.6055",
+    "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"
 }
 
 def ziskaj_plynulost(nazov, suradnice):
@@ -29,7 +29,6 @@ def ziskaj_plynulost(nazov, suradnice):
         flow = res.get('flowSegmentData', {})
         current = flow.get('currentSpeed', 1)
         free = flow.get('freeFlowSpeed', 1)
-        # 100% = voľná cesta, menej = zápcha
         return round((current / free) * 100, 2)
     except:
         return 100
@@ -56,57 +55,53 @@ def zber_dat():
     w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric"
     w_data = requests.get(w_url).json()
     
-    # Príprava riadku - PRESNÉ NÁZVY STĹPCOV
     novy_riadok = {
         "Čas zberu": cas_zberu,
-        "Teplota (°C)": w_data['main']['temp'],
-        "Počasie": w_data['weather'][0]['description']
+        "Teplota (°C)": w_data['main']['temp'] if 'main' in w_data else 0,
+        "Počasie": w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
     }
 
-    # 2. Doprava (Index plynulosti v %)
+    # 2. Doprava
     for nazov, suradnice in VJAZDY.items():
         novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
 
     # 3. Parkovanie
     novy_riadok["volne_rybnikova"] = ziskaj_parkovanie()
 
-    # 4. Excel tabuľka
-poradie_stĺpcov = [
-        "Čas zberu", 
-        "Teplota (°C)", 
-        "Počasie", 
-        "Zdrzanie_Zelenec (min)", 
-        "Zdrzanie_Bucany (min)", 
-        "Zdrzanie_Zavar (min)", 
-        "Zdrzanie_Nitrianska (min)", # Nový
-        "Zdrzanie_Hrnciarovce (min)", # Nový
-        "Zdrzanie_Biely_Kostol (min)", 
-        "Zdrzanie_Sucha (min)", 
-        "Zdrzanie_Spacince (min)", 
-        "Zdrzanie_Ruzindol (min)", 
-        "Zdrzanie_Boleraz (min)", 
-        "volne_rybnikova"
+    # --- DEFINÍCIA PORADIA ---
+    poradie = [
+        "Čas zberu", "Teplota (°C)", "Počasie",
+        "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
+        "Zdrzanie_Nitrianska (min)", "Zdrzanie_Hrnciarovce (min)", "Zdrzanie_Biely_Kostol (min)",
+        "Zdrzanie_Sucha (min)", "Zdrzanie_Spacince (min)", "Zdrzanie_Ruzindol (min)",
+        "Zdrzanie_Boleraz (min)", "volne_rybnikova"
     ]
 
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        # Vymažeme staré "duchárske" stĺpce, ak existujú
-        df = df.drop(columns=['cas', 'teplota', 'pocasie', 'zdrzanie_min'], errors='ignore')
-        
-        # Pridáme nový riadok
+        # Odstránenie starých stĺpcov
+        stare_zle = ['cas', 'teplota', 'pocasie', 'zdrzanie_min']
+        df = df.drop(columns=[c for c in stare_zle if c in df.columns], errors='ignore')
+        # Pridanie nového riadku
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
-        
-        # --- TOTO JE TO KÚZLO: Zoradenie stĺpcov ---
-        # Python zoberie len tie stĺpce, ktoré sú v zozname 'poradie_stĺpcov'
-        # Ak nejaký stĺpec v zozname chýba, v Exceli sa nezobrazí
-        df = df.reindex(columns=poradie_stĺpcov)
-        
-    except Exception as e:
-        # Ak súbor neexistuje, vytvoríme ho rovno so správnym poradím
-        df = pd.DataFrame([novy_riadok], columns=poradie_stĺpcov)
+    except:
+        df = pd.DataFrame([novy_riadok])
 
+    # Zaistenie, že všetky stĺpce z poradia existujú
+    for col in poradie:
+        if col not in df.columns:
+            df[col] = None
+            
+    # Finálne zoradenie stĺpcov
+    df = df[poradie]
+    
+    # Uloženie do Excelu
     df.to_excel("data_trnava_komplet.xlsx", index=False)
-    print(f"Zber hotový: {cas_zberu}")
+    
+    # NOVINKA: Uloženie aj ako HTML pre prehliadač
+    df.tail(20).to_html("index.html", index=False, classes='table table-striped')
+    
+    print(f"Zber úspešný: {cas_zberu}")
 
 if __name__ == "__main__":
     zber_dat()
