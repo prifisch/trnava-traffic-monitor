@@ -68,13 +68,13 @@ def zber_dat():
     for nazov, suradnice in VJAZDY.items():
         novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
 
-    # 3. Parkovanie (pridáme 3 stĺpce)
+    # 3. Parkovanie
     parkoviska = ziskaj_vsetky_parkoviska()
     novy_riadok["P_Rybnikova"] = parkoviska["Rybníková"]
     novy_riadok["P_Hospodarska"] = parkoviska["Hospodárska"]
     novy_riadok["P_Kollarova"] = parkoviska["Kollárova"]
 
-    # --- DEFINÍCIA PORADIA PRE EXCEL ---
+    # --- PORADIE ---
     poradie = [
         "Čas zberu", "Teplota (°C)", "Počasie",
         "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
@@ -85,7 +85,6 @@ def zber_dat():
 
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        # Odstránime starý stĺpec "volne_rybnikova", ak tam ešte je
         df = df.drop(columns=['volne_rybnikova'], errors='ignore')
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
@@ -111,7 +110,6 @@ def zber_dat():
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
     park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
     ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
-    ciste_nazvy_park = ["Rybníková", "Hospodárska", "Kollárova"]
 
     rows_html = ""
     for _, row in df_web.iterrows():
@@ -119,10 +117,8 @@ def zber_dat():
         rows_html += f"<td>{row['Čas zberu']}</td>"
         rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
         rows_html += f"<td>{row['Počasie']}</td>"
-        
         for col in vjazdy_cols:
             rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
-        
         for col in park_cols:
             p_val = row[col]
             p_display = f'<span class="badge bg-light text-dark border">{p_val}</span>' if p_val != "N/A" else '<span class="text-muted small">N/A</span>'
@@ -130,18 +126,18 @@ def zber_dat():
         rows_html += "</tr>"
 
     html_table = f"""
-    <table class="table table-hover table-striped border text-center align-middle">
+    <table class="table table-hover table-striped border text-center align-middle mb-0">
         <thead class="table-dark">
             <tr>
                 <th rowspan="2" class="align-middle">Čas zberu</th>
                 <th rowspan="2" class="align-middle">Teplota</th>
                 <th rowspan="2" class="align-middle">Počasie</th>
                 <th colspan="{len(vjazdy_cols)}" class="border-bottom">Plynulosť dopravy (%)</th>
-                <th colspan="3" class="border-bottom">Voľné parkoviská</th>
+                <th colspan="3" class="border-bottom">Voľné miesta</th>
             </tr>
             <tr>
                 {"".join([f"<th>{n}</th>" for n in ciste_nazvy_vjazdy])}
-                {"".join([f"<th>{n}</th>" for n in ciste_nazvy_park])}
+                <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
             </tr>
         </thead>
         <tbody>
@@ -154,27 +150,35 @@ def zber_dat():
     <html>
     <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-        <title>Trnava Traffic Dashboard</title>
+        <title>Trnava Smart Dashboard</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
             .container-fluid {{ background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 98%; }}
             h2 {{ color: #1a2a6c; font-weight: 800; }}
-            .table {{ font-size: 0.78rem; }}
+            .table {{ font-size: 0.75rem; }}
             th {{ font-weight: 700; font-size: 0.65rem; text-transform: uppercase; }}
-            .badge {{ font-weight: 600; width: 50px; }}
-            .badge.bg-light {{ width: auto; min-width: 35px; }}
+            .badge {{ font-weight: 600; width: 48px; }}
+            .badge.bg-light {{ width: auto; min-width: 30px; }}
+            .legend-item {{ font-size: 0.75rem; font-weight: 600; }}
         </style>
     </head>
     <body class="p-2 p-md-4">
         <div class="container-fluid">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
-                <div>
-                    <h2>🚗 Trnava Smart Dashboard</h2>
-                    <p class="text-muted small">Doprava a parkovanie v reálnom čase</p>
+                <div class="text-center text-md-start">
+                    <h2 class="mb-0">🚗 Trnava Smart Dashboard</h2>
+                    <p class="text-muted small mb-0">Doprava a parkovanie v reálnom čase</p>
                 </div>
-                <span class="badge bg-dark w-auto p-2">Aktualizácia: {cas_zberu}</span>
+                <div class="mt-3 mt-md-0 d-flex flex-column align-items-center align-items-md-end">
+                    <span class="badge bg-dark w-auto p-2 mb-2">Aktualizácia: {cas_zberu}</span>
+                    <div class="d-flex gap-2">
+                        <span class="legend-item"><span class="badge bg-success">&nbsp;</span> 90%+</span>
+                        <span class="legend-item"><span class="badge bg-warning text-dark">&nbsp;</span> 60-89%</span>
+                        <span class="legend-item"><span class="badge bg-danger">&nbsp;</span> < 60%</span>
+                    </div>
+                </div>
             </div>
             <div class="table-responsive">
                 {html_table}
