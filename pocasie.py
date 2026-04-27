@@ -67,20 +67,25 @@ def zber_dat():
     except: df = pd.DataFrame([novy_riadok])
     df.to_excel(excel_file, index=False)
 
-    # Príprava dát pre graf (Analýzy) - posledných 20 záznamov
+    # --- BEZPEČNÉ GENEROVANIE GRAFU ---
     df_chart = df.tail(20)
-    chart_labels = [str(c).split(" ")[1][:5] for c in df_chart['Čas']]
-    chart_data = {n: df_chart[n].tolist() for n in VJAZDY.keys()}
+    chart_labels = []
+    for c in df_chart['Čas']:
+        s = str(c)
+        chart_labels.append(s.split(" ")[1][:5] if " " in s else s[:5])
+    
+    chart_data = {n: df_chart[n].fillna(100).tolist() for n in VJAZDY.keys()}
+    priemer_plynulosti = [round(sum(v)/len(v), 1) for v in zip(*chart_data.values())]
 
-    # Generovanie riadkov tabuľky
+    # --- TABUĽKA ---
     rows_html = ""
-    for _, r in df.tail(15).iloc[::-1].iterrows(): # Posledných 15 od najnovšieho
-        cas = str(r['Čas']).split(" ")[1][:5] if " " in str(r['Čas']) else str(r['Čas'])[:5]
+    for _, r in df.tail(15).iloc[::-1].iterrows():
+        s_cas = str(r['Čas'])
+        cas = s_cas.split(" ")[1][:5] if " " in s_cas else s_cas[:5]
         traffic = "".join([f'<td><span class="status-pill {"status-green" if r[n]>85 else "status-orange" if r[n]>60 else "status-red"}">{r[n]}%</span></td>' for n in VJAZDY.keys()])
         park_vals = "".join([f'<td><span class="fw-bold">{r[f"P_{n}"]}</span></td>' for n in KAPACITY.keys()])
         rows_html += f'<tr><td class="time-col">{cas}</td><td class="fw-bold">{r["Teplota"]}°</td><td><i class="bi {YR_ICON_MAP.get(r["Symbol"], "bi-cloud")}"></i></td>{traffic}{park_vals}</tr>'
 
-    # HTML s JavaScriptom pre menu a grafy
     html_content = f"""
     <!DOCTYPE html>
     <html lang="sk">
@@ -91,32 +96,30 @@ def zber_dat():
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <title>TrnavaPulse v2</title>
         <style>
-            body {{ background: #fff; font-family: sans-serif; display: flex; }}
+            body {{ background: #fff; font-family: -apple-system, system-ui, sans-serif; display: flex; overflow-x: hidden; }}
             .sidebar {{ width: 260px; height: 100vh; background: #f9f9f9; position: fixed; border-right: 1px solid #eee; padding: 40px 20px; z-index: 1000; }}
-            .main-content {{ margin-left: 260px; padding: 50px; width: 100%; }}
-            .nav-item {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: block; margin-bottom: 5px; cursor: pointer; }}
+            .main-content {{ margin-left: 260px; padding: 50px; width: calc(100% - 260px); }}
+            .nav-item {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: block; margin-bottom: 5px; cursor: pointer; transition: 0.2s; }}
             .nav-item.active {{ background: #e8f0fe; color: #1a73e8; font-weight: 600; }}
-            .nav-item:hover:not(.active) {{ background: #f0f0f0; }}
-            .view-section {{ display: none; }}
+            .nav-item i {{ margin-right: 10px; }}
+            .view-section {{ display: none; animation: fadeIn 0.3s; }}
             .view-section.active {{ display: block; }}
+            @keyframes fadeIn {{ from {{ opacity: 0; }} to {{ opacity: 1; }} }}
             .status-pill {{ padding: 4px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700; }}
             .status-green {{ background: #e6f7ed; color: #1db45a; }}
             .status-orange {{ background: #fff4e5; color: #ff9800; }}
             .status-red {{ background: #fdeaea; color: #f44336; }}
             .time-col {{ color: #1a73e8; font-weight: 600; }}
-            #map {{ width: 100%; height: 600px; border-radius: 20px; border: 1px solid #eee; }}
-            .chart-container {{ background: #fff; border: 1px solid #eee; border-radius: 20px; padding: 20px; }}
+            .map-container {{ border-radius: 20px; overflow: hidden; border: 1px solid #eee; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }}
+            .chart-container {{ background: #fff; border: 1px solid #eee; border-radius: 20px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }}
         </style>
     </head>
     <body>
         <div class="sidebar">
             <div class="h4 fw-bold text-primary mb-4">TT-Pulse</div>
-            <div class="nav-item active" onclick="showSection('dashboard', this)"><i class="bi bi-grid-1x2 me-2"></i> Dashboard</div>
-            <div class="nav-item" onclick="showSection('mapa', this)"><i class="bi bi-map me-2"></i> Mapa mesta</div>
-            <div class="nav-item" onclick="showSection('analyzy', this)"><i class="bi bi-bar-chart me-2"></i> Analýzy</div>
-            <div class="mt-auto pt-4 border-top small text-muted">
-                Dáta: YR, TomTom, OpenData TT
-            </div>
+            <div class="nav-item active" onclick="showSection('dashboard', this)"><i class="bi bi-grid-1x2"></i> Dashboard</div>
+            <div class="nav-item" onclick="showSection('mapa', this)"><i class="bi bi-map"></i> Mapa mesta</div>
+            <div class="nav-item" onclick="showSection('analyzy', this)"><i class="bi bi-bar-chart"></i> Analýzy</div>
         </div>
 
         <div class="main-content">
@@ -137,13 +140,14 @@ def zber_dat():
             </div>
 
             <div id="mapa" class="view-section">
-                <h1 class="fw-bold mb-4">Mapa premávky v reálnom čase</h1>
-                <iframe id="map" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42436.52441618641!2d17.58!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" allowfullscreen="" loading="lazy"></iframe>
-                <p class="mt-3 text-muted">Poznámka: Google Mapy zobrazujú vrstvu premávky automaticky.</p>
+                <h1 class="fw-bold mb-4">Aktuálna premávka</h1>
+                <div class="map-container">
+                    <iframe width="100%" height="650" frameborder="0" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42464.717145719!2d17.58!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" allowfullscreen></iframe>
+                </div>
             </div>
 
             <div id="analyzy" class="view-section">
-                <h1 class="fw-bold mb-4">Analýza plynulosti dopravy</h1>
+                <h1 class="fw-bold mb-4">Analýza dopravy</h1>
                 <div class="chart-container">
                     <canvas id="trafficChart"></canvas>
                 </div>
@@ -158,27 +162,25 @@ def zber_dat():
                 element.classList.add('active');
             }}
 
-            // Chart.js inicializácia
             const ctx = document.getElementById('trafficChart').getContext('2d');
             new Chart(ctx, {{
                 type: 'line',
                 data: {{
                     labels: {json.dumps(chart_labels)},
-                    datasets: [
-                        {{
-                            label: 'Plynulosť (priemer vjazdov %)',
-                            data: {json.dumps([round(sum(v)/len(v), 1) for v in zip(*chart_data.values())] if chart_data else [])},
-                            borderColor: '#1a73e8',
-                            backgroundColor: 'rgba(26, 115, 232, 0.1)',
-                            fill: true,
-                            tension: 0.4
-                        }}
-                    ]
+                    datasets: [{{
+                        label: 'Priemerná plynulosť vjazdov (%)',
+                        data: {json.dumps(priemer_plynulosti)},
+                        borderColor: '#1a73e8',
+                        backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 4
+                    }}]
                 }},
                 options: {{
                     responsive: true,
-                    plugins: {{ legend: {{ display: true }} }},
-                    scales: {{ y: {{ min: 0, max: 100 }} }}
+                    scales: {{ y: {{ min: 0, max: 100, ticks: {{ callback: function(value) {{ return value + '%'; }} }} }} }}
                 }}
             }});
         </script>
@@ -187,4 +189,5 @@ def zber_dat():
     """
     with open("index.html", "w", encoding="utf-8") as f: f.write(html_content)
 
-if __name__ == "__main__": zber_dat()
+if __name__ == "__main__":
+    zber_dat()
