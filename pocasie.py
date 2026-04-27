@@ -8,7 +8,6 @@ import pytz
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
-# Skalibrované body bližšie k mestu
 VJAZDY = {
     "Zdrzanie_Zelenec (min)": "48.3615,17.5855",
     "Zdrzanie_Bucany (min)": "48.3932,17.6105",
@@ -79,29 +78,80 @@ def zber_dat():
 
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        # Odstránenie starých stĺpcov
         stare_zle = ['cas', 'teplota', 'pocasie', 'zdrzanie_min']
         df = df.drop(columns=[c for c in stare_zle if c in df.columns], errors='ignore')
-        # Pridanie nového riadku
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
         df = pd.DataFrame([novy_riadok])
 
-    # Zaistenie, že všetky stĺpce z poradia existujú
     for col in poradie:
         if col not in df.columns:
             df[col] = None
             
-    # Finálne zoradenie stĺpcov
     df = df[poradie]
-    
-    # Uloženie do Excelu
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    # NOVINKA: Uloženie aj ako HTML pre prehliadač
-    df.tail(20).to_html("index.html", index=False, classes='table table-striped')
+    # --- VIZUÁLNY TUNING (HTML) ---
+    df_web = df.tail(20).copy()
+
+    def ofarbi_plynulost(val):
+        if isinstance(val, (int, float)):
+            if val >= 90: color = "success"
+            elif val >= 60: color = "warning"
+            else: color = "danger"
+            return f'<span class="badge bg-{color}">{val}%</span>'
+        return val
+
+    vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
+    for col in vjazdy_cols:
+        df_web[col] = df_web[col].apply(ofarbi_plynulost)
+
+    html_content = f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <title>Trnava Traffic Dashboard</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{ background-color: #f8f9fa; font-family: sans-serif; }}
+            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }}
+            h2 {{ color: #2c3e50; font-weight: bold; }}
+            .table {{ font-size: 0.85rem; vertical-align: middle; }}
+            .badge {{ font-size: 0.9rem; }}
+        </style>
+    </head>
+    <body class="p-2 p-md-4">
+        <div class="container-fluid">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+                <div>
+                    <h2>🚗 Trnava Traffic Dashboard</h2>
+                    <p class="text-muted mb-0">Živý monitoring vjazdov do mesta</p>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <span class="badge bg-secondary p-2">Posledný zber: {cas_zberu}</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                {df_web.to_html(index=False, escape=False, classes='table table-hover table-striped border')}
+            </div>
+            <div class="mt-4 p-3 bg-light border rounded">
+                <h6 class="fw-bold">Legenda plynulosti:</h6>
+                <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge bg-success">90-100% (Plynulá doprava)</span>
+                    <span class="badge bg-warning text-dark">60-89% (Zvýšená premávka)</span>
+                    <span class="badge bg-danger">pod 60% (Zápcha)</span>
+                </div>
+                <small class="d-block mt-2 text-muted">* Dáta sú získavané z TomTom Traffic API každú hodinu.</small>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
     
-    print(f"Zber úspešný: {cas_zberu}")
+    print(f"Zber a dashboard hotový: {cas_zberu}")
 
 if __name__ == "__main__":
     zber_dat()
