@@ -78,15 +78,14 @@ def zber_dat():
     df_last = df.tail(8).copy()
     rows_html = ""
     for _, r in df_last.iterrows():
-        # OPRAVA: Prevod na string a ošetrenie NaN hodnôt
-        cas_str = str(r['Čas'])
-        try:
-            # Skúsime vybrať len čas HH:MM
-            t_short = cas_str.split(" ")[1][:5] if " " in cas_str else cas_str[:5]
-        except:
-            t_short = "??:??"
+        # Ošetrenie času
+        cas_val = str(r['Čas'])
+        if " " in cas_val:
+            t_short = cas_val.split(" ")[1][:5]
+        else:
+            t_short = cas_val[:5]
 
-        icon = Y_ICON_MAP.get(r['Symbol'], "bi-cloud-fill")
+        icon = YR_ICON_MAP.get(r['Symbol'], "bi-cloud-fill")
         
         # Plynulosť dopravy
         traffic_cells = ""
@@ -96,7 +95,11 @@ def zber_dat():
             traffic_cells += f'<td><div class="traffic-val" style="color:{color}">{val}%</div></td>'
         
         # Parkovanie
-        park_cells = "".join([f'<td><span class="park-num">{r[f"P_{n}"] if pd.notnull(r[f"P_{n}"]) else "N/A"}</span></td>' for n in ["Rybníková", "Hospodárska", "Kollárova"]])
+        p_cols = ["Rybníková", "Hospodárska", "Kollárova"]
+        park_cells = ""
+        for p_name in p_cols:
+            p_val = r[f"P_{p_name}"] if pd.notnull(r[f"P_{p_name}"]) else "N/A"
+            park_cells += f'<td><span class="park-num">{p_val}</span></td>'
         
         rows_html += f'<tr><td class="time-col">{t_short}</td><td>{r["Teplota"]}°</td><td><i class="bi {icon}"></i></td>{traffic_cells}{park_cells}</tr>'
 
@@ -108,63 +111,63 @@ def zber_dat():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Crextio Trnava Dashboard</title>
+        <title>Trnava Glass Dashboard</title>
         <style>
             body {{ 
                 background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); 
-                min-height: 100vh; font-family: 'Inter', sans-serif; padding: 40px 20px; color: #444;
+                min-height: 100vh; font-family: 'Inter', sans-serif; padding: 40px 10px; color: #444;
             }}
             .glass-shell {{
-                background: rgba(255, 255, 255, 0.7);
+                background: rgba(255, 255, 255, 0.75);
                 backdrop-filter: blur(15px);
                 border-radius: 40px;
                 border: 1px solid rgba(255, 255, 255, 0.4);
-                max-width: 1200px; margin: auto; padding: 40px;
+                max-width: 1240px; margin: auto; padding: 35px;
                 box-shadow: 0 25px 50px rgba(0,0,0,0.05);
             }}
-            .nav-bar {{ display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-wrap: wrap; }}
-            .nav-item {{ background: #fff; padding: 10px 20px; border-radius: 100px; font-weight: 600; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.03); border: none; }}
-            .nav-item.active {{ background: #222; color: #fff; }}
-            .hero-title {{ font-size: 2.5rem; font-weight: 800; letter-spacing: -1.5px; margin-bottom: 40px; color: #222; }}
-            .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }}
-            .info-card {{ background: #fff; border-radius: 30px; padding: 25px; border: 1px solid rgba(255,255,255,0.8); }}
-            .card-label {{ font-size: 0.75rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 1px; }}
-            .card-val {{ font-size: 2rem; font-weight: 800; display: block; margin: 10px 0; }}
-            .table-wrap {{ background: rgba(255,255,255,0.5); border-radius: 30px; padding: 20px; overflow-x: auto; }}
-            .glass-table {{ width: 100%; border-collapse: collapse; min-width: 800px; }}
-            .glass-table th {{ padding: 15px; font-size: 0.65rem; text-transform: uppercase; color: #999; font-weight: 800; text-align: center; }}
-            .glass-table td {{ padding: 18px 10px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 0.9rem; font-weight: 600; }}
-            .time-col {{ color: #000; font-weight: 800 !important; text-align: left !important; padding-left: 20px !important; }}
-            .park-num {{ background: #eee; padding: 5px 12px; border-radius: 10px; font-size: 0.8rem; }}
+            .nav-bar {{ display: flex; justify-content: center; gap: 15px; margin-bottom: 35px; flex-wrap: wrap; }}
+            .nav-item {{ background: #fff; padding: 10px 22px; border-radius: 100px; font-weight: 600; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.02); border: none; color: #666; }}
+            .nav-item.active {{ background: #1a1a1a; color: #fff; }}
+            .hero-title {{ font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -1.5px; margin-bottom: 35px; color: #1a1a1a; text-align: center; }}
+            .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 35px; }}
+            .info-card {{ background: #fff; border-radius: 28px; padding: 22px; border: 1px solid rgba(255,255,255,0.9); }}
+            .card-label {{ font-size: 0.7rem; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
+            .card-val {{ font-size: 1.8rem; font-weight: 800; display: block; margin: 8px 0; color: #1a1a1a; }}
+            .table-wrap {{ background: rgba(255,255,255,0.4); border-radius: 28px; padding: 15px; overflow-x: auto; }}
+            .glass-table {{ width: 100%; border-collapse: collapse; min-width: 900px; }}
+            .glass-table th {{ padding: 12px; font-size: 0.6rem; text-transform: uppercase; color: #aaa; font-weight: 800; text-align: center; }}
+            .glass-table td {{ padding: 16px 8px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 0.85rem; font-weight: 600; }}
+            .time-col {{ color: #000; font-weight: 800 !important; text-align: left !important; padding-left: 15px !important; }}
+            .park-num {{ background: #f0f2f5; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; color: #444; }}
             .traffic-val {{ font-family: 'Monaco', monospace; font-weight: 800; }}
         </style>
     </head>
     <body>
         <div class="glass-shell">
             <div class="nav-bar">
-                <button class="nav-item active">Dashboard</button>
+                <button class="nav-item active">Live Monitor</button>
                 <button class="nav-item">Doprava</button>
                 <button class="nav-item">Parkovanie</button>
-                <button class="nav-item">System</button>
+                <button class="nav-item">Systém</button>
             </div>
 
-            <h1 class="hero-title text-center text-md-start">Welcome in, Trnava</h1>
+            <h1 class="hero-title">Trnava Dashboard</h1>
 
-            <div class="stats-grid text-center text-md-start">
+            <div class="stats-grid">
                 <div class="info-card">
-                    <span class="card-label">Počasie teraz</span>
+                    <span class="card-label">Počasie</span>
                     <span class="card-val">{teplota}°C <i class="bi {YR_ICON_MAP.get(symbol, 'bi-cloud-fill')}"></i></span>
-                    <span class="badge bg-dark rounded-pill p-2 px-3">{teraz.strftime("%H:%M")}</span>
+                    <span class="badge bg-dark rounded-pill px-3">{teraz.strftime("%H:%M")}</span>
                 </div>
                 <div class="info-card">
-                    <span class="card-label">Rybníková voľné</span>
-                    <span class="card-val" style="color: #4a90e2;">{park['Rybníková']}</span>
-                    <div class="progress" style="height: 6px; border-radius: 10px;"><div class="progress-bar" style="width: 60%"></div></div>
+                    <span class="card-label">Rybníková</span>
+                    <span class="card-val" style="color: #3182ce;">{park['Rybníková']}</span>
+                    <span class="small text-muted">voľných miest</span>
                 </div>
-                <div class="info-card">
-                    <span class="card-label">Status</span>
-                    <span class="card-val" style="font-size: 1.2rem; margin-top: 20px;">ONLINE</span>
-                    <span style="font-size: 0.7rem; font-weight: 700; color: #2ecc71;"><i class="bi bi-circle-fill"></i> REÁLNY ČAS</span>
+                <div class="info-card text-center d-flex flex-column justify-content-center">
+                    <span class="card-label">Monitoring</span>
+                    <span class="card-val" style="color: #2f855a; font-size: 1.4rem;">AKTÍVNY</span>
+                    <span style="font-size: 0.65rem; font-weight: 700; color: #48bb78;"><i class="bi bi-circle-fill me-1"></i> SYSTÉM OK</span>
                 </div>
             </div>
 
@@ -172,7 +175,7 @@ def zber_dat():
                 <table class="glass-table">
                     <thead>
                         <tr>
-                            <th>Čas</th><th>Teplota</th><th>Obloha</th>
+                            <th>Čas</th><th>Tep.</th><th>Obloha</th>
                             {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
                             <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
                         </tr>
