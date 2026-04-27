@@ -53,7 +53,7 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 1. Počasie + IKONA
+    # 1. Počasie (Slovenčina + kód ikony)
     w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric&lang=sk"
     w_data = requests.get(w_url).json()
     
@@ -64,7 +64,7 @@ def zber_dat():
         "Čas zberu": cas_zberu,
         "Teplota (°C)": w_data['main']['temp'] if 'main' in w_data else 0,
         "Počasie": p_desc,
-        "Ikona": p_icon # Nový stĺpec pre kód ikony
+        "Ikona": p_icon
     }
 
     # 2. Doprava
@@ -101,6 +101,19 @@ def zber_dat():
     # --- DASHBOARD (HTML) ---
     df_web = df.tail(20).copy()
 
+    # Mapovanie ikon na monochromatické Bootstrap Icons
+    weather_icons_map = {
+        "01d": "bi-sun", "01n": "bi-moon-stars",
+        "02d": "bi-cloud-sun", "02n": "bi-cloud-moon",
+        "03d": "bi-cloud", "03n": "bi-cloud",
+        "04d": "bi-clouds", "04n": "bi-clouds",
+        "09d": "bi-cloud-rain-heavy", "09n": "bi-cloud-rain-heavy",
+        "10d": "bi-cloud-drizzle", "10n": "bi-cloud-drizzle",
+        "11d": "bi-cloud-lightning", "11n": "bi-cloud-lightning",
+        "13d": "bi-snow", "13n": "bi-snow",
+        "50d": "bi-cloud-fog", "50n": "bi-cloud-fog"
+    }
+
     def ofarbi_plynulost(val):
         if isinstance(val, (int, float)):
             if val >= 90: color = "success"
@@ -115,14 +128,14 @@ def zber_dat():
 
     rows_html = ""
     for _, row in df_web.iterrows():
-        # Príprava ikony počasia
-        icon_url = f"https://openweathermap.org/img/wn/{row['Ikona']}@2x.png" if row['Ikona'] else ""
-        icon_html = f'<img src="{icon_url}" width="35" height="35" alt="icon">' if icon_url else ""
+        # Výber ikony (ak kód nepoznáme, dáme otáznik)
+        icon_class = weather_icons_map.get(row['Ikona'], "bi-question-circle")
+        icon_html = f'<i class="{icon_class}" style="font-size: 1.4rem; color: #444;"></i>'
 
         rows_html += "<tr>"
         rows_html += f"<td>{row['Čas zberu']}</td>"
         rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
-        rows_html += f"<td>{icon_html} <br> {row['Počasie']}</td>"
+        rows_html += f"<td>{icon_html}<br><span style='font-size: 0.7rem;'>{row['Počasie']}</span></td>"
         
         for col in vjazdy_cols:
             rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
@@ -157,33 +170,34 @@ def zber_dat():
     <html>
     <head>
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <title>Trnava Smart Dashboard</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
-            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 99%; }}
-            h2 {{ color: #1a2a6c; font-weight: 800; }}
+            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, sans-serif; }}
+            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-top: 20px; max-width: 99%; }}
+            h2 {{ color: #1a2a6c; font-weight: 800; letter-spacing: -0.5px; }}
             .table {{ font-size: 0.72rem; }}
             th {{ font-weight: 700; font-size: 0.6rem; text-transform: uppercase; }}
             .badge {{ font-weight: 600; width: 45px; }}
-            .badge.bg-light {{ width: auto; min-width: 25px; }}
+            .badge.bg-light {{ width: auto; min-width: 30px; }}
             .legend-item {{ font-size: 0.7rem; font-weight: 600; }}
-            img {{ filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.1)); }}
         </style>
     </head>
     <body class="p-1 p-md-3">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3">
-                <div class="text-center text-md-start">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 text-center text-md-start">
+                <div>
                     <h2 class="mb-0">🚗 Trnava Smart Dashboard</h2>
+                    <p class="text-muted small mb-0">Aktuálny stav vjazdov a parkovania</p>
                 </div>
-                <div class="d-flex flex-column align-items-center align-items-md-end">
-                    <span class="badge bg-dark w-auto p-2 mb-1">Aktualizácia: {cas_zberu}</span>
+                <div class="mt-3 mt-md-0 d-flex flex-column align-items-center align-items-md-end">
+                    <span class="badge bg-dark w-auto p-2 mb-2">Aktualizácia: {cas_zberu}</span>
                     <div class="d-flex gap-2">
-                        <span class="legend-item"><span class="badge bg-success" style="width:12px; height:12px;">&nbsp;</span> 90%+</span>
-                        <span class="legend-item"><span class="badge bg-warning text-dark" style="width:12px; height:12px;">&nbsp;</span> 60-89%</span>
-                        <span class="legend-item"><span class="badge bg-danger" style="width:12px; height:12px;">&nbsp;</span> < 60%</span>
+                        <span class="legend-item"><span class="badge bg-success" style="width:10px; height:10px; padding:0;">&nbsp;</span> 90%+</span>
+                        <span class="legend-item"><span class="badge bg-warning text-dark" style="width:10px; height:10px; padding:0;">&nbsp;</span> 60-89%</span>
+                        <span class="legend-item"><span class="badge bg-danger" style="width:10px; height:10px; padding:0;">&nbsp;</span> < 60%</span>
                     </div>
                 </div>
             </div>
