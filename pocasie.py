@@ -160,7 +160,7 @@ def zber_dat():
                     <h2 class="fw-bold mb-4">Dopravná mapa Trnavy</h2>
                     <div class="card-custom">
                         <iframe width="100%" height="600" style="border:0" 
-                            src="https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=Trnava,Slovakia&destination=Trnava,Slovakia&mode=driving">
+                            src=f"https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=48.3775,17.5883&destination=48.3775,17.5883&mode=driving"
                         </iframe>
                     </div>
                 </div>
