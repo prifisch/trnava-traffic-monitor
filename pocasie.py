@@ -1,4 +1,71 @@
-html_content = f"""
+import requests
+import pandas as pd
+import os
+from datetime import datetime
+import pytz
+import json
+
+# --- KONFIGURÁCIA & FUNKCIE (zostávajú rovnaké) ---
+TOMTOM_KEY = os.getenv("TOMTOM_KEY")
+VJAZDY = {
+    "Zelenec": "48.3615,17.5855", "Bučany": "48.3932,17.6105", "Zavar": "48.3735,17.6255",
+    "B. Kostol": "48.3711,17.5512", "Suchá": "48.3885,17.5312", "Špačince": "48.4055,17.6012",
+    "Ružindol": "48.3585,17.5355", "Boleráz": "48.4025,17.5511", "Nitrianska": "48.3725,17.6055",
+    "Hrnčiarovce": "48.3555,17.5755"
+}
+YR_ICON_MAP = {
+    "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
+    "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
+    "snow": "bi-snow", "fog": "bi-cloud-fog", "lightrain": "bi-cloud-drizzle"
+}
+
+def ziskaj_plynulost(suradnice):
+    try:
+        url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={suradnice}"
+        res = requests.get(url, timeout=10).json()
+        return round((res['flowSegmentData'].get('currentSpeed', 1) / res['flowSegmentData'].get('freeFlowSpeed', 1)) * 100, 1)
+    except: return 100
+
+# ... (ostatné funkcie ziskaj_pocasi_yr a ziskaj_parkovanie ponechaj)
+
+def zber_dat():
+    zona = pytz.timezone('Europe/Bratislava')
+    teraz = datetime.now(zona) # TU SA DEFINUJE 'teraz'
+    teplota, symbol = ziskaj_pocasi_yr()
+    park = ziskaj_parkovanie()
+    
+    # 1. Uloženie dát do Excelu
+    novy_riadok = {"Čas": teraz.strftime("%Y-%m-%d %H:%M:%S"), "Teplota": teplota, "Symbol": symbol}
+    for n, s in VJAZDY.items(): novy_riadok[n] = ziskaj_plynulost(s)
+    for n, v in park.items(): novy_riadok[f"P_{n}"] = v
+
+    excel_file = "data_trnava_komplet.xlsx"
+    try:
+        df = pd.read_excel(excel_file)
+        df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
+    except: df = pd.DataFrame([novy_riadok])
+    df.to_excel(excel_file, index=False)
+
+    # 2. Príprava dát pre HTML (všetko musí byť pod definíciou 'teraz')
+    df_chart = df.tail(20)
+    chart_labels = []
+    for c in df_chart['Čas']:
+        s = str(c)
+        chart_labels.append(s.split(" ")[1][:5] if " " in s else s[:5])
+    
+    chart_data = {n: df_chart[n].fillna(100).tolist() for n in VJAZDY.keys()}
+    priemer_plynulosti = [round(sum(v)/len(v), 1) for v in zip(*chart_data.values())]
+
+    rows_html = ""
+    for _, r in df.tail(15).iloc[::-1].iterrows():
+        s_cas = str(r['Čas'])
+        cas_short = s_cas.split(" ")[1][:5] if " " in s_cas else s_cas[:5]
+        traffic = "".join([f'<td><span class="status-pill {"status-green" if r[n]>85 else "status-orange" if r[n]>60 else "status-red"}">{r[n]}%</span></td>' for n in VJAZDY.keys()])
+        park_vals = "".join([f'<td><span class="fw-bold">{r[f"P_{n}"]}</span></td>' for n in ["Rybníková", "Hospodárska", "Kollárova"]])
+        rows_html += f'<tr><td class="time-col">{cas_short}</td><td class="fw-bold">{r["Teplota"]}°</td><td><i class="bi {YR_ICON_MAP.get(r["Symbol"], "bi-cloud")}"></i></td>{traffic}{park_vals}</tr>'
+
+    # 3. HTML kód s vložením premennej 'teraz'
+    html_content = f"""
     <!DOCTYPE html>
     <html lang="sk">
     <head>
@@ -8,143 +75,51 @@ html_content = f"""
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
         <title>TrnavaPulse v2</title>
         <style>
-            :root {{
-                --sidebar-bg: #f8f9fa;
-                --primary-color: #1a73e8;
-                --text-main: #202124;
-                --text-muted: #5f6368;
-                --bg-main: #ffffff;
-            }}
-            body {{ background: var(--bg-main); font-family: 'Inter', -apple-system, sans-serif; color: var(--text-main); display: flex; }}
-            
-            /* Sidebar podľa inšpirácie */
-            .sidebar {{ 
-                width: 260px; height: 100vh; background: var(--sidebar-bg); 
-                position: fixed; border-right: 1px solid #e0e0e0; padding: 32px 16px; 
-            }}
-            .logo {{ 
-                font-weight: 800; font-size: 1.4rem; color: var(--primary-color); 
-                margin-bottom: 40px; padding-left: 12px; display: flex; align-items: center; gap: 10px;
-            }}
-            .nav-item {{ 
-                padding: 12px 16px; border-radius: 8px; color: var(--text-muted); 
-                text-decoration: none; display: flex; align-items: center; gap: 12px;
-                margin-bottom: 4px; cursor: pointer; font-weight: 500; transition: all 0.2s;
-            }}
-            .nav-item:hover {{ background: #f1f3f4; color: var(--text-main); }}
-            .nav-item.active {{ background: #e8f0fe; color: var(--primary-color); }}
-            
-            /* Hlavný obsah */
-            .main-content {{ margin-left: 260px; width: 100%; min-height: 100vh; display: flex; flex-direction: column; }}
-            
-            /* Horná lišta */
-            .top-bar {{ 
-                height: 64px; border-bottom: 1px solid #e0e0e0; display: flex; 
-                align-items: center; justify-content: space-between; padding: 0 40px;
-                background: white; position: sticky; top: 0; z-index: 100;
-            }}
-            .search-box {{ background: #f1f3f4; border: none; padding: 8px 16px; border-radius: 8px; width: 300px; outline: none; }}
-            
-            .content-area {{ padding: 40px; }}
-            h1 {{ font-weight: 800; font-size: 2rem; margin-bottom: 32px; letter-spacing: -0.5px; }}
-            
-            /* Karta pre tabuľku */
-            .data-card {{ 
-                background: white; border: 1px solid #e0e0e0; border-radius: 16px; 
-                box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden;
-            }}
-            .table {{ margin-bottom: 0; }}
-            .table thead th {{ 
-                background: #f8f9fa; font-size: 0.75rem; text-transform: uppercase; 
-                letter-spacing: 0.05em; color: var(--text-muted); border-top: none;
-                padding: 16px 12px; font-weight: 600; text-align: center;
-            }}
-            .table tbody td {{ padding: 16px 12px; vertical-align: middle; text-align: center; border-bottom: 1px solid #f1f3f4; }}
-            
-            .status-pill {{ 
-                padding: 6px 12px; border-radius: 20px; font-size: 0.75rem; 
-                font-weight: 700; display: inline-block; min-width: 65px;
-            }}
+            /* Tu vlož tie moderné CSS štýly, ktoré sme ladili minule */
+            :root {{ --sidebar-bg: #f8f9fa; --primary-color: #1a73e8; }}
+            body {{ background: #fff; font-family: sans-serif; display: flex; }}
+            .sidebar {{ width: 260px; height: 100vh; background: var(--sidebar-bg); position: fixed; border-right: 1px solid #e0e0e0; padding: 32px 16px; }}
+            .main-content {{ margin-left: 260px; width: 100%; }}
+            .top-bar {{ height: 64px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }}
+            .status-pill {{ padding: 5px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-block; }}
             .status-green {{ background: #e6f4ea; color: #1e8e3e; }}
             .status-orange {{ background: #fef7e0; color: #f9ab00; }}
             .status-red {{ background: #fce8e6; color: #d93025; }}
-            
-            .time-col {{ font-weight: 700; color: var(--primary-color); text-align: left !important; padding-left: 24px !important; }}
-            
-            /* Animácie */
-            .view-section {{ display: none; animation: fadeIn 0.4s ease-out; }}
-            .view-section.active {{ display: block; }}
-            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(10px); }} to {{ opacity: 1; transform: translateY(0); }} }}
+            .time-col {{ font-weight: 700; color: #1a73e8; padding-left: 24px !important; text-align: left !important; }}
+            .data-card {{ background: white; border: 1px solid #e0e0e0; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.03); overflow: hidden; margin: 40px; }}
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <div class="logo"><i class="bi bi-geo-fill"></i> TT-Pulse</div>
-            <div class="nav-item active" onclick="showSection('dashboard', this)"><i class="bi bi-grid-1x2"></i> Dashboard</div>
-            <div class="nav-item" onclick="showSection('mapa', this)"><i class="bi bi-map"></i> Mapa mesta</div>
-            <div class="nav-item" onclick="showSection('analyzy', this)"><i class="bi bi-bar-chart"></i> Analýzy</div>
+            <div class="h4 fw-bold text-primary mb-4">TT-Pulse</div>
+            <div class="nav-item active"><i class="bi bi-grid-1x2 me-2"></i> Dashboard</div>
         </div>
-
         <div class="main-content">
             <div class="top-bar">
-                <input type="text" class="search-box" placeholder="Hľadať vjazdy...">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="small text-muted">{teraz.strftime("%d. %m. %Y")}</span>
-                    <i class="bi bi-bell text-muted"></i>
-                    <div style="width: 32px; height: 32px; background: #e8f0fe; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #1a73e8; font-weight: bold;">T</div>
-                </div>
+                <span class="fw-bold">Trnava, Slovakia</span>
+                <span class="small text-muted">{teraz.strftime("%d. %m. %Y %H:%M")}</span>
             </div>
-
-            <div class="content-area">
-                <div id="dashboard" class="view-section active">
-                    <div class="d-flex justify-content-between align-items-center mb-4">
-                        <h1>Dashboard</h1>
-                        <button class="btn btn-primary rounded-pill px-4" onclick="location.reload()"><i class="bi bi-arrow-clockwise me-2"></i>Aktualizovať</button>
-                    </div>
-                    
-                    <div class="data-card">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th class="time-col" style="text-align: left !important;">Čas</th>
-                                        <th>Tep.</th>
-                                        <th>Obloha</th>
-                                        {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
-                                        <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>{rows_html}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="mapa" class="view-section">
-                    <h1>Mapa mesta</h1>
-                    <div class="data-card p-2">
-                        <iframe width="100%" height="600" frameborder="0" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42392.2345!2d17.58!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" style="border-radius: 12px;" allowfullscreen></iframe>
-                    </div>
-                </div>
-
-                <div id="analyzy" class="view-section">
-                    <h1>Analýzy</h1>
-                    <div class="chart-container">
-                        <canvas id="trafficChart"></canvas>
-                    </div>
+            <div class="p-5">
+                <h1 class="fw-bold mb-4">Dashboard</h1>
+                <div class="data-card">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr>
+                                <th class="time-col">Čas</th><th>Tep.</th><th>Obloha</th>
+                                {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
+                                <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
+                            </tr>
+                        </thead>
+                        <tbody>{rows_html}</tbody>
+                    </table>
                 </div>
             </div>
         </div>
-
-        <script>
-            function showSection(sectionId, element) {{
-                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
-                document.getElementById(sectionId).classList.add('active');
-                element.classList.add('active');
-            }}
-            // ... (zvyšok JS kódu pre graf zostáva rovnaký)
-        </script>
     </body>
     </html>
     """
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+
+if __name__ == "__main__":
+    zber_dat()
