@@ -17,7 +17,9 @@ VJAZDY = {
     "Zdrzanie_Sucha (min)": "48.3885,17.5312",
     "Zdrzanie_Spacince (min)": "48.4055,17.6012",
     "Zdrzanie_Ruzindol (min)": "48.3585,17.5355",
-    "Zdrzanie_Boleraz (min)": "48.4025,17.5511"
+    "Zdrzanie_Boleraz (min)": "48.4025,17.5511",
+    "Zdrzanie_Nitrianska (min)": "48.3725,17.6055",  # Vjazd od D1/Nitry
+    "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"  # Vjazd od Senca
 }
 
 def ziskaj_plynulost(nazov, suradnice):
