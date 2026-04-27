@@ -6,6 +6,7 @@ import pytz
 
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
+# OpenWeather kľúč už pre počasie nepotrebujeme, ale necháme ho tu, ak ho máš v Secrets
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
 VJAZDY = {
@@ -21,6 +22,23 @@ VJAZDY = {
     "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"
 }
 
+# Mapovanie YR.no symbolov na Bootstrap Icons
+YR_ICON_MAP = {
+    "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
+    "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
+    "rainshowers": "bi-cloud-drizzle", "thunder": "bi-cloud-lightning",
+    "snow": "bi-snow", "fog": "bi-cloud-fog", "sleet": "bi-cloud-hail",
+    "lightrain": "bi-cloud-drizzle", "lightrainshowers": "bi-cloud-drizzle"
+}
+
+# Pomocný preklad YR.no stavov
+YR_PREKLAD = {
+    "clearsky": "Jasno", "fair": "Skoro jasno", "partlycloudy": "Polooblačno",
+    "cloudy": "Oblačno", "rain": "Dážď", "heavyrain": "Silný dážď",
+    "rainshowers": "Prehánky", "thunder": "Búrky", "snow": "Sneženie",
+    "fog": "Hmla", "sleet": "Dážď so snehom", "lightrain": "Slabý dážď"
+}
+
 def ziskaj_plynulost(nazov, suradnice):
     try:
         url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={suradnice}"
@@ -31,6 +49,27 @@ def ziskaj_plynulost(nazov, suradnice):
         return round((current / free) * 100, 2)
     except:
         return 100
+
+def ziskaj_pocasi_yr():
+    try:
+        # Súradnice Trnavy pre YR.no
+        lat, lon = 48.3775, 17.5883
+        url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
+        headers = {'User-Agent': 'TrnavaTrafficMonitor/1.0 github.com/tvoj-user-tu'}
+        res = requests.get(url, headers=headers, timeout=10).json()
+        
+        current = res['properties']['timeseries'][0]['data']
+        teplota = current['instant']['details']['air_temperature']
+        symbol_kod = current['next_1_hours']['summary']['symbol_code']
+        
+        # Očistíme symbol od prípony _day/_night
+        cisty_symbol = symbol_kod.split('_')[0]
+        popis = YR_PREKLAD.get(cisty_symbol, cisty_symbol.capitalize())
+        
+        return teplota, cisty_symbol, popis
+    except Exception as e:
+        print(f"Chyba YR.no: {e}")
+        return 0, "cloudy", "Neznáme"
 
 def ziskaj_vsetky_parkoviska():
     vysledok = {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
@@ -53,18 +92,14 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 1. Počasie (Slovenčina + kód ikony)
-    w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric&lang=sk"
-    w_data = requests.get(w_url).json()
-    
-    p_desc = w_data['weather'][0]['description'].capitalize() if 'weather' in w_data else "Neznáme"
-    p_icon = w_data['weather'][0]['icon'] if 'weather' in w_data else ""
+    # 1. Počasie z YR.no
+    teplota, symbol, popis = ziskaj_pocasi_yr()
 
     novy_riadok = {
         "Čas zberu": cas_zberu,
-        "Teplota (°C)": w_data['main']['temp'] if 'main' in w_data else 0,
-        "Počasie": p_desc,
-        "Ikona": p_icon
+        "Teplota (°C)": teplota,
+        "Počasie": popis,
+        "Ikona": symbol # Tu ukladáme nórsky kód symbolu
     }
 
     # 2. Doprava
@@ -101,18 +136,9 @@ def zber_dat():
     # --- DASHBOARD (HTML) ---
     df_web = df.tail(20).copy()
 
-    # Mapovanie ikon na monochromatické Bootstrap Icons
-    weather_icons_map = {
-        "01d": "bi-sun", "01n": "bi-moon-stars",
-        "02d": "bi-cloud-sun", "02n": "bi-cloud-moon",
-        "03d": "bi-cloud", "03n": "bi-cloud",
-        "04d": "bi-clouds", "04n": "bi-clouds",
-        "09d": "bi-cloud-rain-heavy", "09n": "bi-cloud-rain-heavy",
-        "10d": "bi-cloud-drizzle", "10n": "bi-cloud-drizzle",
-        "11d": "bi-cloud-lightning", "11n": "bi-cloud-lightning",
-        "13d": "bi-snow", "13n": "bi-snow",
-        "50d": "bi-cloud-fog", "50n": "bi-cloud-fog"
-    }
+    vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
+    park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
+    ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
 
     def ofarbi_plynulost(val):
         if isinstance(val, (int, float)):
@@ -122,15 +148,11 @@ def zber_dat():
             return f'<span class="badge bg-{color}">{val}%</span>'
         return val
 
-    vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
-    park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
-    ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
-
     rows_html = ""
     for _, row in df_web.iterrows():
-        # Výber ikony (ak kód nepoznáme, dáme otáznik)
-        icon_class = weather_icons_map.get(row['Ikona'], "bi-question-circle")
-        icon_html = f'<i class="{icon_class}" style="font-size: 1.4rem; color: #444;"></i>'
+        # Monochromatická ikona podľa YR.no symbolu
+        icon_class = YR_ICON_MAP.get(row['Ikona'], "bi-cloud")
+        icon_html = f'<i class="bi {icon_class}" style="font-size: 1.4rem; color: #333;"></i>'
 
         rows_html += "<tr>"
         rows_html += f"<td>{row['Čas zberu']}</td>"
@@ -175,22 +197,22 @@ def zber_dat():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', Tahoma, sans-serif; }}
+            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
             .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-top: 20px; max-width: 99%; }}
-            h2 {{ color: #1a2a6c; font-weight: 800; letter-spacing: -0.5px; }}
+            h2 {{ color: #1a2a6c; font-weight: 800; }}
             .table {{ font-size: 0.72rem; }}
             th {{ font-weight: 700; font-size: 0.6rem; text-transform: uppercase; }}
             .badge {{ font-weight: 600; width: 45px; }}
-            .badge.bg-light {{ width: auto; min-width: 30px; }}
+            .badge.bg-light {{ width: auto; min-width: 25px; }}
             .legend-item {{ font-size: 0.7rem; font-weight: 600; }}
         </style>
     </head>
     <body class="p-1 p-md-3">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3 text-center text-md-start">
-                <div>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3">
+                <div class="text-center text-md-start">
                     <h2 class="mb-0">🚗 Trnava Smart Dashboard</h2>
-                    <p class="text-muted small mb-0">Aktuálny stav vjazdov a parkovania</p>
+                    <p class="text-muted small">Dáta: MET Norway, TomTom, OpenData Trnava</p>
                 </div>
                 <div class="mt-3 mt-md-0 d-flex flex-column align-items-center align-items-md-end">
                     <span class="badge bg-dark w-auto p-2 mb-2">Aktualizácia: {cas_zberu}</span>
