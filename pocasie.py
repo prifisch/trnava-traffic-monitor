@@ -8,64 +8,72 @@ import pytz
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
 
+# Definícia vjazdov (súradnice sme mali v predošlej verzii)
+VJAZDY = {
+    "Zdrzanie_Zelenec (min)": "48.358,17.583",
+    "Zdrzanie_Bucany (min)": "48.411,17.636",
+    "Zdrzanie_Zavar (min)": "48.375,17.653",
+    "Zdrzanie_Biely_Kostol (min)": "48.372,17.545",
+    "Zdrzanie_Sucha (min)": "48.391,17.525",
+    "Zdrzanie_Spacince (min)": "48.415,17.599",
+    "Zdrzanie_Ruzindol (min)": "48.356,17.522",
+    "Zdrzanie_Boleraz (min)": "48.435,17.521"
+}
+
+def ziskaj_zdrzanie(suradnice):
+    try:
+        url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key={TOMTOM_KEY}&point={suradnice}"
+        res = requests.get(url, timeout=10).json()
+        return round(res['flowSegmentData'].get('delaySeconds', 0) / 60, 2)
+    except:
+        return 0
+
 def ziskaj_parkovanie():
     try:
         url = "https://opendata.trnava.sk/api/v1/parkings"
-        # Pridáme hlavičku, aby sme vyzerali ako bežný prehliadač
         headers = {'User-Agent': 'Mozilla/5.0'}
-        response = requests.get(url, headers=headers, timeout=10)
-        
-        if response.status_code != 200:
-            print(f"Mestské API je momentálne nedostupné (Status: {response.status_code})")
-            return 0
-            
-        data = response.json()
-        for p in data.get('features', []):
+        res = requests.get(url, headers=headers, timeout=10).json()
+        for p in res.get('features', []):
             prop = p.get('properties', {})
             if "Rybníková" in prop.get('name', ''):
                 return prop.get('free_places', 0)
         return 0
-    except Exception as e:
-        print(f"Poznámka: Dáta o parkovaní momentálne nie sú dostupné.")
+    except:
         return 0
 
 def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
-    print(f"Spúšťam zber dát (Trnavský čas): {cas_zberu}")
-
+    
     # 1. Počasie
     w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric"
     w_data = requests.get(w_url).json()
-    temp = w_data['main']['temp']
-    desc = w_data['weather'][0]['description']
-
-    # 2. Doprava (TomTom) - Príklad pre vjazd od Zelenca
-    t_url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json?key={TOMTOM_KEY}&point=48.358,17.583"
-    t_data = requests.get(t_url).json()
-    zdrzanie = t_data['flowSegmentData'].get('delaySeconds', 0) / 60
-
-    # 3. Parkovanie (Mesto Trnava) - NOVINKA
-    volne_rybnikova = ziskaj_parkovanie()
-
-    # Príprava riadku
+    
+    # Príprava riadku s presnými názvami stĺpcov ako máš v Exceli
     novy_riadok = {
-        "cas": cas_zberu,
-        "teplota": temp,
-        "pocasie": desc,
-        "zdrzanie_min": round(zdrzanie, 2),
-        "volne_rybnikova": volne_rybnikova
+        "Čas zberu": cas_zberu,
+        "Teplota (°C)": w_data['main']['temp'],
+        "Počasie": w_data['weather'][0]['description']
     }
 
-    # Uloženie do Excelu
+    # 2. Doprava pre všetky smery
+    for nazov_stlpca, suradnice in VJAZDY.items():
+        novy_riadok[nazov_stlpca] = ziskaj_zdrzanie(suradnice)
+
+    # 3. Parkovanie
+    novy_riadok["volne_rybnikova"] = ziskaj_parkovanie()
+
+    # Uloženie
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
+        # Odstránime prípadné staré "zlé" stĺpce (malými písmenami), ak tam vznikli
+        df = df.drop(columns=['cas', 'teplota', 'pocasie', 'zdrzanie_min'], errors='ignore')
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
         df = pd.DataFrame([novy_riadok])
     
     df.to_excel("data_trnava_komplet.xlsx", index=False)
-    print(f"Dáta uložené. Voľné miesta Rybníková: {volne_rybnikova}")
+    print(f"Zber hotový: {cas_zberu}")
 
 if __name__ == "__main__":
     zber_dat()
