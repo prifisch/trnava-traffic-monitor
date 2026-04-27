@@ -8,6 +8,7 @@ import json
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 
+# Tvoje spresnené súradnice
 VJAZDY = {
     "Zelenec": "48.355515,17.589294", "Bučany": "48.389916,17.612661", "Zavar": "48.375651,17.621178",
     "B. Kostol": "48.376036,17.565585", "Suchá": "48.389582,17.557863", "Špačince": "48.402741,17.600505",
@@ -21,42 +22,37 @@ YR_ICON_MAP = {
     "snow": "bi-snow", "fog": "bi-cloud-fog", "lightrain": "bi-cloud-drizzle"
 }
 
-# --- POMOCNÉ FUNKCIE ---
+# --- FUNKCIE (Zber dát) ---
 
 def ziskaj_plynulost(suradnice):
     try:
         url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={suradnice}"
         res = requests.get(url, timeout=10).json()
-        return round((res['flowSegmentData'].get('currentSpeed', 1) / res['flowSegmentData'].get('freeFlowSpeed', 1)) * 100, 1)
-    except:
-        return 100
+        flow = res.get('flowSegmentData', {})
+        return round((flow.get('currentSpeed', 1) / flow.get('freeFlowSpeed', 1)) * 100, 1)
+    except: return 100
 
 def ziskaj_pocasi_yr():
     try:
         headers = {'User-Agent': 'TrnavaPulse/1.0 (https://github.com/vas-repo)'}
-        res = requests.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=48.37&lon=17.58", headers=headers, timeout=10).json()
+        res = requests.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=48.37&lon=17.58", headers=headers).json()
         data = res['properties']['timeseries'][0]['data']
-        temp = data['instant']['details']['air_temperature']
-        sym = data['next_1_hours']['summary']['symbol_code'].split('_')[0]
-        return temp, sym
-    except Exception as e:
-        print(f"Chyba pocasia: {e}")
-        return 0, "cloudy"
+        return data['instant']['details']['air_temperature'], data['next_1_hours']['summary']['symbol_code'].split('_')[0]
+    except: return 0, "cloudy"
 
 def ziskaj_parkovanie():
     res = {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
     try:
-        data = requests.get("https://opendata.trnava.sk/api/v1/parkings", timeout=10).json()
+        data = requests.get("https://opendata.trnava.sk/api/v1/parkings").json()
         for p in data['features']:
             name = p['properties']['name']
             val = p['properties']['free_places']
             for k in res.keys():
                 if k in name: res[k] = val
         return res
-    except:
-        return res
+    except: return res
 
-# --- HLAVNÁ FUNKCIA ZBERU ---
+# --- HLAVNÁ LOGIKA ---
 
 def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
@@ -64,43 +60,29 @@ def zber_dat():
     teplota, symbol = ziskaj_pocasi_yr()
     park = ziskaj_parkovanie()
     
-    # Príprava riadku
+    # Zápis dát do Excelu
     novy_riadok = {"Čas": teraz.strftime("%Y-%m-%d %H:%M:%S"), "Teplota": teplota, "Symbol": symbol}
-    for n, s in VJAZDY.items(): 
-        novy_riadok[n] = ziskaj_plynulost(s)
-    for n, v in park.items(): 
-        novy_riadok[f"P_{n}"] = v
+    for n, s in VJAZDY.items(): novy_riadok[n] = ziskaj_plynulost(s)
+    for n, v in park.items(): novy_riadok[f"P_{n}"] = v
 
-    # Uloženie do Excelu
     excel_file = "data_trnava_komplet.xlsx"
     try:
         df = pd.read_excel(excel_file)
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
-    except: 
-        df = pd.DataFrame([novy_riadok])
+    except: df = pd.DataFrame([novy_riadok])
     df.to_excel(excel_file, index=False)
 
-    # Príprava dát pre Dashboard
+    # Príprava HTML výstupu
     df_chart = df.tail(20)
-    chart_labels = []
-    for c in df_chart['Čas']:
-        s = str(c)
-        chart_labels.append(s.split(" ")[1][:5] if " " in s else s[:5])
-    
-    chart_data = {n: df_chart[n].fillna(100).tolist() for n in VJAZDY.keys()}
-    priemer_plynulosti = [round(sum(v)/len(v), 1) for v in zip(*chart_data.values())]
+    chart_labels = [str(c).split(" ")[1][:5] if " " in str(c) else str(c)[:5] for c in df_chart['Čas']]
+    chart_data = [round(df_chart[list(VJAZDY.keys())].iloc[i].mean(), 1) for i in range(len(df_chart))]
 
     rows_html = ""
     for _, r in df.tail(15).iloc[::-1].iterrows():
-        s_cas = str(r['Čas'])
-        cas_short = s_cas.split(" ")[1][:5] if " " in s_cas else s_cas[:5]
+        cas = str(r['Čas']).split(" ")[1][:5] if " " in str(r['Čas']) else str(r['Čas'])[:5]
         traffic = "".join([f'<td><span class="status-pill {"status-green" if r[n]>85 else "status-orange" if r[n]>60 else "status-red"}">{r[n]}%</span></td>' for n in VJAZDY.keys()])
-        p_ryb = r.get('P_Rybníková', 'N/A')
-        p_hosp = r.get('P_Hospodárska', 'N/A')
-        p_koll = r.get('P_Kollárova', 'N/A')
-        rows_html += f'<tr><td class="time-col">{cas_short}</td><td class="fw-bold text-center">{r["Teplota"]}°</td><td class="text-center"><i class="bi {YR_ICON_MAP.get(r["Symbol"], "bi-cloud")}"></i></td>{traffic}<td>{p_ryb}</td><td>{p_hosp}</td><td>{p_koll}</td></tr>'
+        rows_html += f'<tr><td class="time-col">{cas}</td><td class="fw-bold">{r["Teplota"]}°C</td><td><i class="bi {YR_ICON_MAP.get(r["Symbol"], "bi-cloud")}"></i></td>{traffic}<td>{r.get("P_Rybníková","N/A")}</td><td>{r.get("P_Hospodárska","N/A")}</td><td>{r.get("P_Kollárova","N/A")}</td></tr>'
 
-    # Generovanie HTML
     html_content = f"""
     <!DOCTYPE html>
     <html lang="sk">
@@ -109,61 +91,127 @@ def zber_dat():
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
         <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-        <title>TrnavaPulse</title>
+        <title>TT-Pulse | Smart City Dashboard</title>
         <style>
-            :root {{ --primary: #1a73e8; --bg: #f8f9fa; }}
-            body {{ background: var(--bg); font-family: 'Inter', sans-serif; display: flex; }}
-            .sidebar {{ width: 260px; height: 100vh; background: #fff; position: fixed; border-right: 1px solid #e0e0e0; padding: 32px 16px; }}
-            .main-content {{ margin-left: 260px; width: 100%; }}
-            .top-bar {{ height: 64px; background: #fff; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }}
-            .data-card {{ background: #fff; border: 1px solid #e0e0e0; border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow: hidden; margin: 40px; }}
-            .status-pill {{ padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }}
+            :root {{ --primary: #1a73e8; --sidebar: #f8f9fa; }}
+            body {{ background: #ffffff; font-family: 'Inter', -apple-system, sans-serif; display: flex; margin: 0; }}
+            .sidebar {{ width: 280px; height: 100vh; background: var(--sidebar); position: fixed; border-right: 1px solid #eee; padding: 30px 20px; display: flex; flex-direction: column; }}
+            .main {{ margin-left: 280px; width: 100%; min-height: 100vh; background: #fff; }}
+            .top-bar {{ height: 70px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; }}
+            .content {{ padding: 40px; }}
+            .nav-link {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: flex; align-items: center; gap: 12px; margin-bottom: 5px; cursor: pointer; transition: 0.2s; }}
+            .nav-link.active {{ background: #e8f0fe; color: var(--primary); font-weight: 600; }}
+            .nav-link:hover:not(.active) {{ background: #f1f3f4; }}
+            .card-custom {{ background: #fff; border: 1px solid #eee; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); overflow: hidden; }}
+            .status-pill {{ padding: 5px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; display: inline-block; min-width: 65px; text-align: center; }}
             .status-green {{ background: #e6f4ea; color: #1e8e3e; }}
             .status-orange {{ background: #fef7e0; color: #f9ab00; }}
             .status-red {{ background: #fce8e6; color: #d93025; }}
-            .time-col {{ font-weight: 700; color: var(--primary); padding-left: 24px !important; }}
-            .nav-item {{ padding: 12px; border-radius: 8px; color: #5f6368; cursor: pointer; text-decoration: none; display: block; }}
-            .nav-item.active {{ background: #e8f0fe; color: var(--primary); font-weight: 600; }}
+            .time-col {{ font-weight: 700; color: var(--primary); padding-left: 25px !important; text-align: left !important; }}
+            .legend-item {{ display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: #666; }}
+            .view-section {{ display: none; }}
+            .view-section.active {{ display: block; }}
+            .source-box {{ margin-top: auto; padding-top: 20px; border-top: 1px solid #ddd; }}
+            .source-link {{ font-size: 0.75rem; color: #888; text-decoration: none; display: block; margin-bottom: 8px; }}
+            .source-link:hover {{ color: var(--primary); }}
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <div class="h4 fw-bold text-primary mb-4"><i class="bi bi-geo-alt-fill"></i> TT-Pulse</div>
-            <div class="nav-item active" onclick="showSection('dashboard', this)"><i class="bi bi-grid-1x2 me-2"></i> Dashboard</div>
-            <div class="nav-item" onclick="showSection('mapa', this)"><i class="bi bi-map me-2"></i> Mapa mesta</div>
+            <h3 class="text-primary fw-bold mb-4"><i class="bi bi-broadcast-pin"></i> TT-Pulse</h3>
+            <div class="nav-link active" onclick="show('dash', this)"><i class="bi bi-grid-1x2"></i> Dashboard</div>
+            <div class="nav-link" onclick="show('map', this)"><i class="bi bi-map"></i> Mapa mesta</div>
+            <div class="nav-link" onclick="show('stats', this)"><i class="bi bi-graph-up"></i> Analýzy</div>
+
+            <div class="source-box">
+                <p class="small fw-bold text-uppercase text-muted mb-2" style="font-size: 0.65rem;">Zdroje dát</p>
+                <a href="https://www.yr.no/en/forecast/daily-table/2-3057140/Slovakia/Trnava/Trnava" target="_blank" class="source-link"><i class="bi bi-cloud-sun"></i> Počasie: YR.no</a>
+                <a href="https://www.tomtom.com/traffic-index/trnava-traffic/" target="_blank" class="source-link"><i class="bi bi-car-front"></i> Doprava: TomTom</a>
+                <a href="https://opendata.trnava.sk/" target="_blank" class="source-link"><i class="bi bi-database"></i> Parkovanie: OpenData TT</a>
+            </div>
         </div>
-        <div class="main-content">
+
+        <div class="main">
             <div class="top-bar">
-                <span class="fw-bold">Trnava, SR</span>
-                <span class="text-muted small">{teraz.strftime("%d. %m. %Y %H:%M")}</span>
-            </div>
-            <div id="dashboard" class="view-section">
-                <div class="data-card">
-                    <table class="table table-hover mb-0">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="time-col">Čas</th><th>Tepl.</th><th>Obloha</th>
-                                {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
-                                <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
-                            </tr>
-                        </thead>
-                        <tbody>{rows_html}</tbody>
-                    </table>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge bg-primary">LIVE</span>
+                    <span class="fw-bold">Monitoring Trnava</span>
+                </div>
+                <div class="text-muted small">
+                    <i class="bi bi-clock me-1"></i> Posledná aktualizácia: {teraz.strftime("%H:%M")}
                 </div>
             </div>
-            <div id="mapa" class="view-section d-none">
-                <div class="data-card p-0">
-                    <iframe width="100%" height="600" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42484.73357591605!2d17.58!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" style="border:0;" allowfullscreen=""></iframe>
+
+            <div class="content">
+                <div id="dash" class="view-section active">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="fw-bold m-0">Prehľad vjazdov</h2>
+                        <div class="d-flex gap-3 card-custom px-3 py-2">
+                            <div class="legend-item"><span class="status-pill status-green"></span> Plynulá</div>
+                            <div class="legend-item"><span class="status-pill status-orange"></span> Zhustená</div>
+                            <div class="legend-item"><span class="status-pill status-red"></span> Zápcha</div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-custom">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="time-col">Čas</th><th>Tep.</th><th>Obloha</th>
+                                        {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
+                                        <th class="bg-light">Ryb.</th><th class="bg-light">Hosp.</th><th class="bg-light">Koll.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>{rows_html}</tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="map" class="view-section">
+                    <h2 class="fw-bold mb-4">Dopravná mapa (Google)</h2>
+                    <div class="card-custom">
+                        <iframe width="100%" height="600" src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42436.6578647585!2d17.5855!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v1700000000000!5m2!1ssk!2ssk&layer=t" style="border:0;" allowfullscreen></iframe>
+                    </div>
+                </div>
+
+                <div id="stats" class="view-section">
+                    <h2 class="fw-bold mb-4">Trend plynulosti dopravy</h2>
+                    <div class="card-custom p-4">
+                        <canvas id="trafficChart" height="100"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
+
         <script>
-            function showSection(id, el) {{
-                document.querySelectorAll('.view-section').forEach(s => s.classList.add('d-none'));
-                document.getElementById(id).classList.remove('d-none');
-                document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+            function show(id, el) {{
+                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(id).classList.add('active');
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
                 el.classList.add('active');
             }}
+
+            new Chart(document.getElementById('trafficChart'), {{
+                type: 'line',
+                data: {{
+                    labels: {json.dumps(chart_labels)},
+                    datasets: [{{
+                        label: 'Priemerná priepustnosť (%)',
+                        data: {json.dumps(chart_data)},
+                        borderColor: '#1a73e8',
+                        backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3
+                    }}]
+                }},
+                options: {{ 
+                    plugins: {{ legend: {{ display: false }} }},
+                    scales: {{ y: {{ min: 0, max: 100, ticks: {{ callback: v => v + '%' }} }} }}
+                }}
+            }});
         </script>
     </body>
     </html>
