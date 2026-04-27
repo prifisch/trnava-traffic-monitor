@@ -91,20 +91,57 @@ def zber_dat():
     df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    # --- VIZUÁLNY TUNING (HTML) ---
+# --- VIZUÁLNY TUNING (HTML) ---
     df_web = df.tail(20).copy()
 
+    # Funkcia na farbičky
     def ofarbi_plynulost(val):
         if isinstance(val, (int, float)):
             if val >= 90: color = "success"
-            elif val >= 60: color = "warning"
+            elif val >= 60: color = "warning text-dark"
             else: color = "danger"
             return f'<span class="badge bg-{color}">{val}%</span>'
         return val
 
+    # Definujeme stĺpce, ktoré budeme upravovať
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
+    
+    # 1. Vyčistíme názvy miest pre podhlavičku (napr. "Zdrzanie_Zelenec (min)" -> "Zelenec")
+    ciste_nazvy = []
+    for col in df_web.columns:
+        if "Zdrzanie_" in col:
+            mesto = col.replace("Zdrzanie_", "").replace(" (min)", "")
+            ciste_nazvy.append(mesto)
+        else:
+            ciste_nazvy.append(col)
+
+    # 2. Aplikujeme farby na dáta
     for col in vjazdy_cols:
         df_web[col] = df_web[col].apply(ofarbi_plynulost)
+
+    # 3. Vygenerujeme HTML s dvojitou hlavičkou
+    # Rozdelíme stĺpce na tie pred "zdržaním", samotné zdržania a tie po nich
+    cols_count = len(vjazdy_cols)
+    
+    html_table = f"""
+    <table class="table table-hover table-striped border text-center">
+        <thead class="table-dark">
+            <tr>
+                <th rowspan="2" class="align-middle">Čas zberu</th>
+                <th rowspan="2" class="align-middle">Teplota</th>
+                <th rowspan="2" class="align-middle">Počasie</th>
+                <th colspan="{cols_count}" class="border-bottom">Zdržanie (Plynulosť dopravy %)</th>
+                <th rowspan="2" class="align-middle">Parkovisko</th>
+            </tr>
+            <tr>
+                {"".join([f"<th>{n}</th>" for n in ciste_nazvy if n not in ["Čas zberu", "Teplota (°C)", "Počasie", "volne_rybnikova"]])}
+            </tr>
+        </thead>
+        <tbody>
+            {df_web.to_html(index=False, header=False, escape=False, border=0)}
+        </tbody>
+    </table>
+    """
 
     html_content = f"""
     <html>
@@ -117,32 +154,27 @@ def zber_dat():
             body {{ background-color: #f8f9fa; font-family: sans-serif; }}
             .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }}
             h2 {{ color: #2c3e50; font-weight: bold; }}
-            .table {{ font-size: 0.85rem; vertical-align: middle; }}
-            .badge {{ font-size: 0.9rem; }}
+            .table {{ font-size: 0.82rem; vertical-align: middle; }}
+            th {{ font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }}
         </style>
     </head>
     <body class="p-2 p-md-4">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
                 <div>
                     <h2>🚗 Trnava Traffic Dashboard</h2>
-                    <p class="text-muted mb-0">Živý monitoring vjazdov do mesta</p>
                 </div>
-                <div class="mt-2 mt-md-0">
-                    <span class="badge bg-secondary p-2">Posledný zber: {cas_zberu}</span>
-                </div>
+                <span class="badge bg-secondary p-2">Posledná aktualizácia: {cas_zberu}</span>
             </div>
             <div class="table-responsive">
-                {df_web.to_html(index=False, escape=False, classes='table table-hover table-striped border')}
+                {html_table}
             </div>
             <div class="mt-4 p-3 bg-light border rounded">
-                <h6 class="fw-bold">Legenda plynulosti:</h6>
-                <div class="d-flex gap-2 flex-wrap">
-                    <span class="badge bg-success">90-100% (Plynulá doprava)</span>
-                    <span class="badge bg-warning text-dark">60-89% (Zvýšená premávka)</span>
-                    <span class="badge bg-danger">pod 60% (Zápcha)</span>
+                <div class="d-flex gap-3 flex-wrap justify-content-center">
+                    <span class="badge bg-success">90-100% Plynulá</span>
+                    <span class="badge bg-warning text-dark">60-89% Zhustená</span>
+                    <span class="badge bg-danger">pod 60% Zápcha</span>
                 </div>
-                <small class="d-block mt-2 text-muted">* Dáta sú získavané z TomTom Traffic API každú hodinu.</small>
             </div>
         </div>
     </body>
