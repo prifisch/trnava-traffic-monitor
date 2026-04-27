@@ -36,7 +36,7 @@ def ziskaj_plynulost(suradnice):
 
 def ziskaj_pocasi_yr():
     try:
-        headers = {'User-Agent': 'TrnavaMonitor/1.0'}
+        headers = {'User-Agent': 'TrnavaPulse/1.0'}
         res = requests.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=48.37&lon=17.58", headers=headers, timeout=10).json()
         data = res['properties']['timeseries'][0]['data']
         return data['instant']['details']['air_temperature'], data['next_1_hours']['summary']['symbol_code'].split('_')[0]
@@ -99,63 +99,77 @@ def zber_dat():
         <meta charset="UTF-8">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Mondays Style Trnava</title>
+        <title>TrnavaPulse - Smart Dashboard</title>
         <style>
-            body {{ background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111; }}
-            .sidebar {{ width: 240px; height: 100vh; background: #f9f9f9; position: fixed; padding: 40px 20px; border-right: 1px solid #eee; }}
-            .main {{ margin-left: 240px; padding: 60px; }}
-            .logo {{ font-weight: 700; font-size: 1.4rem; margin-bottom: 50px; display: flex; align-items: center; gap: 10px; }}
-            .nav-item {{ padding: 10px 15px; border-radius: 8px; color: #666; text-decoration: none; display: block; margin-bottom: 5px; font-weight: 500; }}
+            body {{ background-color: #ffffff; font-family: -apple-system, system-ui, sans-serif; color: #111; }}
+            .sidebar {{ width: 260px; height: 100vh; background: #f9f9f9; position: fixed; padding: 40px 20px; border-right: 1px solid #eee; display: flex; flex-direction: column; }}
+            .main {{ margin-left: 260px; padding: 50px; }}
+            .logo {{ font-weight: 800; font-size: 1.5rem; margin-bottom: 40px; color: #1a73e8; letter-spacing: -1px; }}
+            .nav-item {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: block; margin-bottom: 5px; font-weight: 500; transition: 0.2s; }}
+            .nav-item:hover {{ background: #f0f0f0; }}
             .nav-item.active {{ background: #e8f0fe; color: #1a73e8; }}
             .nav-item i {{ margin-right: 12px; }}
             
-            .greeting {{ font-size: 2rem; font-weight: 700; margin-bottom: 10px; }}
-            .sub-greeting {{ color: #666; margin-bottom: 40px; display: flex; gap: 20px; font-weight: 500; font-size: 0.9rem; }}
-            .sub-greeting span {{ display: flex; align-items: center; gap: 8px; }}
+            .greeting {{ font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }}
+            .sub-greeting {{ color: #777; margin-bottom: 35px; display: flex; gap: 20px; font-weight: 500; font-size: 0.9rem; }}
             
-            .section-title {{ font-weight: 700; font-size: 1.1rem; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
-            .table-container {{ border: 1px solid #eee; border-radius: 12px; overflow: hidden; }}
+            .legend-box {{ background: #fff; border: 1px solid #eee; border-radius: 15px; padding: 20px; margin-bottom: 30px; }}
+            .legend-title {{ font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #aaa; letter-spacing: 1px; margin-bottom: 15px; display: block; }}
+            
+            .table-container {{ border: 1px solid #eee; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }}
             .custom-table {{ width: 100%; border-collapse: collapse; }}
-            .custom-table th {{ background: #fafafa; padding: 15px; text-align: center; font-size: 0.75rem; color: #888; text-transform: uppercase; border-bottom: 1px solid #eee; }}
-            .custom-table td {{ padding: 15px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #444; }}
-            .time-col {{ text-align: left !important; padding-left: 25px !important; color: #888 !important; }}
+            .custom-table th {{ background: #fafafa; padding: 18px 12px; text-align: center; font-size: 0.7rem; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; letter-spacing: 0.5px; }}
+            .custom-table td {{ padding: 16px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #333; }}
+            .time-col {{ text-align: left !important; padding-left: 25px !important; font-weight: 600; color: #1a73e8 !important; }}
             
-            .status-pill {{ padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; }}
+            .status-pill {{ padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; display: inline-block; min-width: 110px; }}
             .status-green {{ background: #e6f7ed; color: #1db45a; }}
             .status-orange {{ background: #fff4e5; color: #ff9800; }}
             .status-red {{ background: #fdeaea; color: #f44336; }}
             
-            .search-bar {{ background: #f1f1f1; border: none; border-radius: 8px; padding: 8px 15px; width: 300px; font-size: 0.9rem; }}
+            .source-links {{ margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.75rem; color: #aaa; }}
+            .source-links a {{ color: #777; text-decoration: none; display: block; margin-bottom: 8px; }}
+            .source-links a:hover {{ text-decoration: underline; color: #1a73e8; }}
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <div class="logo">TrnavaPulse</div>
-            <a href="#" class="nav-item"><i class="bi bi-speedometer2"></i> Dashboard</a>
-            <a href="#" class="nav-item active"><i class="bi bi-geo-alt"></i> Vjazdy</a>
-            <a href="#" class="nav-item"><i class="bi bi-p-square"></i> Parkovanie</a>
-            <a href="#" class="nav-item"><i class="bi bi-gear"></i> Nastavenia</a>
+            <div class="logo"><i class="bi bi-broadcast-pin"></i> TT-Pulse</div>
+            <a href="#" class="nav-item active"><i class="bi bi-grid-1x2"></i> Dashboard</a>
+            <a href="#" class="nav-item"><i class="bi bi-map"></i> Mapa mesta</a>
+            <a href="#" class="nav-item"><i class="bi bi-calendar3"></i> Analýzy</a>
+            
+            <div class="source-links">
+                <span style="font-weight: 700; color: #555; display: block; margin-bottom: 10px;">ZDROJE DÁT</span>
+                <a href="https://www.yr.no/en/forecast/daily-table/2-3057140/Slovakia/Trnava/Trnava" target="_blank"><i class="bi bi-cloud-sun"></i> Počasie: YR.no</a>
+                <a href="https://www.tomtom.com/en_gb/traffic-index/trnava-traffic/" target="_blank"><i class="bi bi-car-front"></i> Doprava: TomTom</a>
+                <a href="https://opendata.trnava.sk/" target="_blank"><i class="bi bi-database"></i> Parkovanie: OpenData TT</a>
+            </div>
         </div>
 
         <div class="main">
-            <div class="d-flex justify-content-between align-items-center mb-2">
-                <input type="text" class="search-bar" placeholder="Hľadať vjazdy...">
-                <div class="d-flex gap-3">
-                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3">Zdieľať</button>
-                    <button class="btn btn-sm btn-primary rounded-pill px-3">+ Pridať pohľad</button>
-                </div>
-            </div>
-
-            <div class="greeting">Dobrý deň, Trnava!</div>
+            <div class="greeting">Prehľad Trnavy</div>
             <div class="sub-greeting">
-                <span><i class="bi bi-clock"></i> Posledný zber: {teraz.strftime("%H:%M")}</span>
-                <span><i class="bi bi-thermometer-half"></i> Teplota: {teplota}°C</span>
-                <span><i class="bi bi-check-circle-fill text-success"></i> Systém online</span>
+                <span><i class="bi bi-clock-history"></i> Posledná aktualizácia: {teraz.strftime("%H:%M:%S")}</span>
+                <span><i class="bi bi-geo-alt"></i> Lokalita: Trnava, SK</span>
             </div>
 
-            <div class="section-title">
-                <span>Moje projekty: Doprava</span>
-                <button class="btn btn-sm text-secondary">Zobraziť všetko</button>
+            <div class="legend-box">
+                <span class="legend-title">Legenda plynulosti vjazdov</span>
+                <div class="d-flex gap-4">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-pill status-green" style="min-width: 20px; padding: 4px 8px;">Plynulá</span>
+                        <span class="small text-muted">> 85% rýchlosti</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-pill status-orange" style="min-width: 20px; padding: 4px 8px;">Zdržanie</span>
+                        <span class="small text-muted">60% - 85% rýchlosti</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="status-pill status-red" style="min-width: 20px; padding: 4px 8px;">Zápcha</span>
+                        <span class="small text-muted">< 60% rýchlosti</span>
+                    </div>
+                </div>
             </div>
 
             <div class="table-container">
@@ -163,10 +177,10 @@ def zber_dat():
                     <thead>
                         <tr>
                             <th style="text-align:left; padding-left:25px;">Čas</th>
-                            <th>Teplota</th>
+                            <th>Tep.</th>
                             <th>Obloha</th>
                             {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
-                            <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
+                            <th>Rybníková</th><th>Hosp.</th><th>Kollár.</th>
                         </tr>
                     </thead>
                     <tbody>{rows_html}</tbody>
