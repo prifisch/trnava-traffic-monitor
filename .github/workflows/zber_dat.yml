@@ -27,7 +27,7 @@ jobs:
       - name: Spustenie zberu dát
         env:
           TOMTOM_KEY: ${{ secrets.TOMTOM_KEY }}
-          OPENWEATHER_KEY: ${{ secrets.OPENWEATHER_KEY }}
+          GOOGLE_MAPS_KEY: ${{ secrets.GOOGLE_MAPS_KEY }}
         run: python pocasie.py
 
       - name: Uloženie zmien (Excel a HTML)
