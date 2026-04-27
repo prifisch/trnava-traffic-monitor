@@ -177,7 +177,8 @@ def zber_dat():
                             height="100%" 
                             frameborder="0" 
                             style="border:0;" 
-                            src="https://www.google.com/maps/embed/v1/view?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&center=48.3775,17.5883&zoom=13&maptype=roadmap&layer=traffic" 
+                            # Nahraď 'TVOJ_API_KLUZ' reálnym kľúčom z konzoly
+                            src = f"https://www.google.com/maps/embed/v1/view?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&center=48.3775,17.5883&zoom=13&layer=traffic"
                             allowfullscreen>
                         </iframe>
                     </div>
