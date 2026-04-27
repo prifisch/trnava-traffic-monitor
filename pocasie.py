@@ -6,9 +6,6 @@ import pytz
 
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
-# OpenWeather kľúč už pre počasie nepotrebujeme, ale necháme ho tu, ak ho máš v Secrets
-WEATHER_API_KEY = os.getenv("OPENWEATHER_KEY")
-
 VJAZDY = {
     "Zdrzanie_Zelenec (min)": "48.3615,17.5855",
     "Zdrzanie_Bucany (min)": "48.3932,17.6105",
@@ -22,7 +19,6 @@ VJAZDY = {
     "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"
 }
 
-# Mapovanie YR.no symbolov na Bootstrap Icons
 YR_ICON_MAP = {
     "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
     "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
@@ -31,7 +27,6 @@ YR_ICON_MAP = {
     "lightrain": "bi-cloud-drizzle", "lightrainshowers": "bi-cloud-drizzle"
 }
 
-# Pomocný preklad YR.no stavov
 YR_PREKLAD = {
     "clearsky": "Jasno", "fair": "Skoro jasno", "partlycloudy": "Polooblačno",
     "cloudy": "Oblačno", "rain": "Dážď", "heavyrain": "Silný dážď",
@@ -52,23 +47,17 @@ def ziskaj_plynulost(nazov, suradnice):
 
 def ziskaj_pocasi_yr():
     try:
-        # Súradnice Trnavy pre YR.no
         lat, lon = 48.3775, 17.5883
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
-        headers = {'User-Agent': 'TrnavaTrafficMonitor/1.0 github.com/tvoj-user-tu'}
+        headers = {'User-Agent': 'TrnavaTrafficMonitor/1.0'}
         res = requests.get(url, headers=headers, timeout=10).json()
-        
         current = res['properties']['timeseries'][0]['data']
         teplota = current['instant']['details']['air_temperature']
         symbol_kod = current['next_1_hours']['summary']['symbol_code']
-        
-        # Očistíme symbol od prípony _day/_night
         cisty_symbol = symbol_kod.split('_')[0]
         popis = YR_PREKLAD.get(cisty_symbol, cisty_symbol.capitalize())
-        
         return teplota, cisty_symbol, popis
-    except Exception as e:
-        print(f"Chyba YR.no: {e}")
+    except:
         return 0, "cloudy", "Neznáme"
 
 def ziskaj_vsetky_parkoviska():
@@ -92,27 +81,17 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 1. Počasie z YR.no
     teplota, symbol, popis = ziskaj_pocasi_yr()
+    novy_riadok = {"Čas zberu": cas_zberu, "Teplota (°C)": teplota, "Počasie": popis, "Ikona": symbol}
 
-    novy_riadok = {
-        "Čas zberu": cas_zberu,
-        "Teplota (°C)": teplota,
-        "Počasie": popis,
-        "Ikona": symbol # Tu ukladáme nórsky kód symbolu
-    }
-
-    # 2. Doprava
     for nazov, suradnice in VJAZDY.items():
         novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
 
-    # 3. Parkovanie
     parkoviska = ziskaj_vsetky_parkoviska()
     novy_riadok["P_Rybnikova"] = parkoviska["Rybníková"]
     novy_riadok["P_Hospodarska"] = parkoviska["Hospodárska"]
     novy_riadok["P_Kollarova"] = parkoviska["Kollárova"]
 
-    # --- PORADIE ---
     poradie = [
         "Čas zberu", "Teplota (°C)", "Počasie", "Ikona",
         "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
@@ -127,15 +106,10 @@ def zber_dat():
     except:
         df = pd.DataFrame([novy_riadok])
 
-    for col in poradie:
-        if col not in df.columns: df[col] = None
-            
     df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    # --- DASHBOARD (HTML) ---
     df_web = df.tail(20).copy()
-
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
     park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
     ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
@@ -150,22 +124,15 @@ def zber_dat():
 
     rows_html = ""
     for _, row in df_web.iterrows():
-        # Monochromatická ikona podľa YR.no symbolu
         icon_class = YR_ICON_MAP.get(row['Ikona'], "bi-cloud")
         icon_html = f'<i class="bi {icon_class}" style="font-size: 1.4rem; color: #333;"></i>'
-
-        rows_html += "<tr>"
-        rows_html += f"<td>{row['Čas zberu']}</td>"
-        rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
-        rows_html += f"<td>{icon_html}<br><span style='font-size: 0.7rem;'>{row['Počasie']}</span></td>"
-        
-        for col in vjazdy_cols:
-            rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
-        for col in park_cols:
-            p_val = row[col]
-            p_display = f'<span class="badge bg-light text-dark border">{p_val}</span>' if p_val != "N/A" else '<span class="text-muted small">N/A</span>'
-            rows_html += f"<td>{p_display}</td>"
-        rows_html += "</tr>"
+        rows_html += f"""<tr>
+            <td>{row['Čas zberu']}</td>
+            <td>{row['Teplota (°C)']}°C</td>
+            <td>{icon_html}<br><span style='font-size: 0.7rem;'>{row['Počasie']}</span></td>
+            {"".join([f"<td>{ofarbi_plynulost(row[col])}</td>" for col in vjazdy_cols])}
+            {"".join([f"<td><span class='badge bg-light text-dark border'>{row[col]}</span></td>" for col in park_cols])}
+        </tr>"""
 
     html_table = f"""
     <table class="table table-hover table-striped border text-center align-middle mb-0">
@@ -182,11 +149,8 @@ def zber_dat():
                 <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
             </tr>
         </thead>
-        <tbody>
-            {rows_html}
-        </tbody>
-    </table>
-    """
+        <tbody>{rows_html}</tbody>
+    </table>"""
 
     html_content = f"""
     <html>
@@ -197,39 +161,41 @@ def zber_dat():
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
-            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
-            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); margin-top: 20px; max-width: 99%; }}
+            body {{ background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }}
+            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-top: 20px; max-width: 99%; }}
             h2 {{ color: #1a2a6c; font-weight: 800; }}
             .table {{ font-size: 0.72rem; }}
             th {{ font-weight: 700; font-size: 0.6rem; text-transform: uppercase; }}
             .badge {{ font-weight: 600; width: 45px; }}
-            .badge.bg-light {{ width: auto; min-width: 25px; }}
-            .legend-item {{ font-size: 0.7rem; font-weight: 600; }}
+            footer {{ font-size: 0.75rem; color: #6c757d; margin-top: 20px; padding: 20px 0; border-top: 1px solid #dee2e6; }}
+            .legend-dot {{ width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 5px; }}
         </style>
     </head>
     <body class="p-1 p-md-3">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3">
-                <div class="text-center text-md-start">
-                    <h2 class="mb-0">🚗 Trnava Smart Dashboard</h2>
-                    <p class="text-muted small">Dáta: MET Norway, TomTom, OpenData Trnava</p>
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h2 class="mb-0 text-uppercase" style="letter-spacing: 1px;">Trnava Monitor</h2>
                 </div>
-                <div class="mt-3 mt-md-0 d-flex flex-column align-items-center align-items-md-end">
-                    <span class="badge bg-dark w-auto p-2 mb-2">Aktualizácia: {cas_zberu}</span>
-                    <div class="d-flex gap-2">
-                        <span class="legend-item"><span class="badge bg-success" style="width:10px; height:10px; padding:0;">&nbsp;</span> 90%+</span>
-                        <span class="legend-item"><span class="badge bg-warning text-dark" style="width:10px; height:10px; padding:0;">&nbsp;</span> 60-89%</span>
-                        <span class="legend-item"><span class="badge bg-danger" style="width:10px; height:10px; padding:0;">&nbsp;</span> < 60%</span>
-                    </div>
+                <span class="badge bg-dark w-auto p-2">Posledná aktualizácia: {cas_zberu}</span>
+            </div>
+            
+            <div class="table-responsive">{html_table}</div>
+
+            <footer class="text-center">
+                <div class="mb-2">
+                    <span class="me-3"><span class="legend-dot bg-success"></span> 90-100% Plynulá</span>
+                    <span class="me-3"><span class="legend-dot bg-warning"></span> 60-89% Zhustená</span>
+                    <span class="me-3"><span class="legend-dot bg-danger"></span> pod 60% Zápcha</span>
                 </div>
-            </div>
-            <div class="table-responsive">
-                {html_table}
-            </div>
+                <div>
+                    <strong>Zdroje dát:</strong> MET Norway (Počasie), TomTom (Doprava), Mesto Trnava (Parkovanie)
+                </div>
+            </footer>
         </div>
     </body>
-    </html>
-    """
+    </html>"""
+    
     with open("index.html", "w", encoding="utf-8") as f:
         f.write(html_content)
 
