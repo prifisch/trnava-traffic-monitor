@@ -42,7 +42,6 @@ def ziskaj_vsetky_parkoviska():
             prop = p.get('properties', {})
             meno = prop.get('name', '')
             volne = prop.get('free_places')
-            
             if "Rybníková" in meno: vysledok["Rybníková"] = volne if volne is not None else "N/A"
             elif "Hospodárska" in meno: vysledok["Hospodárska"] = volne if volne is not None else "N/A"
             elif "Kollárova" in meno: vysledok["Kollárova"] = volne if volne is not None else "N/A"
@@ -54,18 +53,18 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
-    # 1. Počasie (Pridané &lang=sk pre slovenčinu)
+    # 1. Počasie + IKONA
     w_url = f"http://api.openweathermap.org/data/2.5/weather?q=Trnava&appid={WEATHER_API_KEY}&units=metric&lang=sk"
     w_data = requests.get(w_url).json()
     
-    pocasie_text = w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
-    # Malá úprava: prvé písmeno veľké
-    pocasie_text = pocasie_text.capitalize()
+    p_desc = w_data['weather'][0]['description'].capitalize() if 'weather' in w_data else "Neznáme"
+    p_icon = w_data['weather'][0]['icon'] if 'weather' in w_data else ""
 
     novy_riadok = {
         "Čas zberu": cas_zberu,
         "Teplota (°C)": w_data['main']['temp'] if 'main' in w_data else 0,
-        "Počasie": pocasie_text
+        "Počasie": p_desc,
+        "Ikona": p_icon # Nový stĺpec pre kód ikony
     }
 
     # 2. Doprava
@@ -80,7 +79,7 @@ def zber_dat():
 
     # --- PORADIE ---
     poradie = [
-        "Čas zberu", "Teplota (°C)", "Počasie",
+        "Čas zberu", "Teplota (°C)", "Počasie", "Ikona",
         "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
         "Zdrzanie_Nitrianska (min)", "Zdrzanie_Hrnciarovce (min)", "Zdrzanie_Biely_Kostol (min)",
         "Zdrzanie_Sucha (min)", "Zdrzanie_Spacince (min)", "Zdrzanie_Ruzindol (min)",
@@ -89,7 +88,6 @@ def zber_dat():
 
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        df = df.drop(columns=['volne_rybnikova'], errors='ignore')
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
         df = pd.DataFrame([novy_riadok])
@@ -117,10 +115,15 @@ def zber_dat():
 
     rows_html = ""
     for _, row in df_web.iterrows():
+        # Príprava ikony počasia
+        icon_url = f"https://openweathermap.org/img/wn/{row['Ikona']}@2x.png" if row['Ikona'] else ""
+        icon_html = f'<img src="{icon_url}" width="35" height="35" alt="icon">' if icon_url else ""
+
         rows_html += "<tr>"
         rows_html += f"<td>{row['Čas zberu']}</td>"
         rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
-        rows_html += f"<td>{row['Počasie']}</td>"
+        rows_html += f"<td>{icon_html} <br> {row['Počasie']}</td>"
+        
         for col in vjazdy_cols:
             rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
         for col in park_cols:
@@ -159,28 +162,28 @@ def zber_dat():
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <style>
             body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
-            .container-fluid {{ background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 98%; }}
+            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 99%; }}
             h2 {{ color: #1a2a6c; font-weight: 800; }}
-            .table {{ font-size: 0.75rem; }}
-            th {{ font-weight: 700; font-size: 0.65rem; text-transform: uppercase; }}
-            .badge {{ font-weight: 600; width: 48px; }}
-            .badge.bg-light {{ width: auto; min-width: 30px; }}
-            .legend-item {{ font-size: 0.75rem; font-weight: 600; }}
+            .table {{ font-size: 0.72rem; }}
+            th {{ font-weight: 700; font-size: 0.6rem; text-transform: uppercase; }}
+            .badge {{ font-weight: 600; width: 45px; }}
+            .badge.bg-light {{ width: auto; min-width: 25px; }}
+            .legend-item {{ font-size: 0.7rem; font-weight: 600; }}
+            img {{ filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.1)); }}
         </style>
     </head>
-    <body class="p-2 p-md-4">
+    <body class="p-1 p-md-3">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-3">
                 <div class="text-center text-md-start">
                     <h2 class="mb-0">🚗 Trnava Smart Dashboard</h2>
-                    <p class="text-muted small mb-0">Doprava a parkovanie v reálnom čase</p>
                 </div>
-                <div class="mt-3 mt-md-0 d-flex flex-column align-items-center align-items-md-end">
-                    <span class="badge bg-dark w-auto p-2 mb-2">Aktualizácia: {cas_zberu}</span>
+                <div class="d-flex flex-column align-items-center align-items-md-end">
+                    <span class="badge bg-dark w-auto p-2 mb-1">Aktualizácia: {cas_zberu}</span>
                     <div class="d-flex gap-2">
-                        <span class="legend-item"><span class="badge bg-success">&nbsp;</span> 90%+</span>
-                        <span class="legend-item"><span class="badge bg-warning text-dark">&nbsp;</span> 60-89%</span>
-                        <span class="legend-item"><span class="badge bg-danger">&nbsp;</span> < 60%</span>
+                        <span class="legend-item"><span class="badge bg-success" style="width:12px; height:12px;">&nbsp;</span> 90%+</span>
+                        <span class="legend-item"><span class="badge bg-warning text-dark" style="width:12px; height:12px;">&nbsp;</span> 60-89%</span>
+                        <span class="legend-item"><span class="badge bg-danger" style="width:12px; height:12px;">&nbsp;</span> < 60%</span>
                     </div>
                 </div>
             </div>
