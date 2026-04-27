@@ -171,20 +171,21 @@ def zber_dat():
                 </div>
 
                 <div id="map" class="view-section">
-                    <h2 class="fw-bold mb-4">Aktuálna dopravná situácia</h2>
-                    <div class="card-custom" style="height: 650px;">
-                    # V sekcii HTML pre mapu mesta:
-                    <iframe 
-                        width="100%" 
-                        height="600" 
-                        src="https://maps.google.com/maps?q=Trnava&t=&z=13&ie=UTF8&iwloc=&output=embed&layer=t" 
-                        style="border:0;" 
-                        allowfullscreen>
-                    </iframe>
+                    <h2 class="fw-bold mb-4">Živá dopravná mapa Trnavy</h2>
+                    <div class="card-custom">
+                        <iframe
+                            width="100%"
+                            height="600"
+                            style="border:0"
+                            loading="lazy"
+                            allowfullscreen
+                            referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=Trnava&destination=Trnava&mode=driving">
+                        </iframe>
                     </div>
-                    <div class="mt-3 small text-muted">
-                        <i class="bi bi-info-circle me-1"></i> Mapa zobrazuje živé dáta o hustote premávky. Zelená (plynulá), Oranžová (spomalená), Červená (zápchy).
-                    </div>
+                    <p class="mt-2 small text-muted">
+                        <i class="bi bi-info-circle me-1"></i> Režim trás automaticky aktivuje vrstvu premávky (zelená/oranžová/červená).
+                    </p>
                 </div>
 
                 <div id="stats" class="view-section">
