@@ -7,6 +7,7 @@ import json
 
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
+GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 
 # Tvoje spresnené súradnice
 VJAZDY = {
@@ -178,7 +179,7 @@ def zber_dat():
                             frameborder="0" 
                             style="border:0;" 
                             # Nahraď 'TVOJ_API_KLUZ' reálnym kľúčom z konzoly
-                            src = f"https://www.google.com/maps/embed/v1/view?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&center=48.3775,17.5883&zoom=13&layer=traffic"
+                            src="https://www.google.com/maps/embed/v1/view?key={GOOGLE_MAPS_KEY}&center=48.3775,17.5883&zoom=13&layer=traffic"
                             allowfullscreen>
                         </iframe>
                     </div>
