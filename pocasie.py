@@ -21,9 +21,9 @@ VJAZDY = {
 }
 
 YR_ICON_MAP = {
-    "clearsky": "bi-sun-fill", "fair": "bi-cloud-sun-fill", "partlycloudy": "bi-cloud-sun-fill",
-    "cloudy": "bi-clouds-fill", "rain": "bi-cloud-rain-fill", "heavyrain": "bi-cloud-rain-heavy-fill",
-    "snow": "bi-snow", "fog": "bi-cloud-fog-fill", "lightrain": "bi-cloud-drizzle-fill"
+    "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
+    "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
+    "snow": "bi-snow", "fog": "bi-cloud-fog", "lightrain": "bi-cloud-drizzle"
 }
 
 def ziskaj_plynulost(suradnice):
@@ -74,116 +74,104 @@ def zber_dat():
     
     df.to_excel(excel_file, index=False)
 
-    # --- HTML GENERÁCIA ---
-    df_last = df.tail(8).copy()
+    df_last = df.tail(10).copy()
     rows_html = ""
     for _, r in df_last.iterrows():
-        # Ošetrenie času
         cas_val = str(r['Čas'])
-        if " " in cas_val:
-            t_short = cas_val.split(" ")[1][:5]
-        else:
-            t_short = cas_val[:5]
-
-        icon = YR_ICON_MAP.get(r['Symbol'], "bi-cloud-fill")
+        t_short = cas_val.split(" ")[1][:5] if " " in cas_val else cas_val[:5]
+        icon = YR_ICON_MAP.get(r['Symbol'], "bi-cloud")
         
-        # Plynulosť dopravy
         traffic_cells = ""
         for n in VJAZDY.keys():
             val = r[n] if pd.notnull(r[n]) else 100
-            color = "#2ecc71" if val > 85 else "#f1c40f" if val > 60 else "#e74c3c"
-            traffic_cells += f'<td><div class="traffic-val" style="color:{color}">{val}%</div></td>'
+            status_class = "status-green" if val > 85 else "status-orange" if val > 60 else "status-red"
+            status_text = "Plynulá" if val > 85 else "Zdržanie" if val > 60 else "Zápcha"
+            traffic_cells += f'<td><span class="status-pill {status_class}">{status_text} ({val}%)</span></td>'
         
-        # Parkovanie
-        p_cols = ["Rybníková", "Hospodárska", "Kollárova"]
-        park_cells = ""
-        for p_name in p_cols:
-            p_val = r[f"P_{p_name}"] if pd.notnull(r[f"P_{p_name}"]) else "N/A"
-            park_cells += f'<td><span class="park-num">{p_val}</span></td>'
+        park_cells = "".join([f'<td><span class="text-dark fw-bold">{r[f"P_{n}"] if pd.notnull(r[f"P_{n}"]) else "N/A"}</span></td>' for n in ["Rybníková", "Hospodárska", "Kollárova"]])
         
-        rows_html += f'<tr><td class="time-col">{t_short}</td><td>{r["Teplota"]}°</td><td><i class="bi {icon}"></i></td>{traffic_cells}{park_cells}</tr>'
+        rows_html += f'<tr><td class="time-col">{t_short}</td><td class="fw-bold">{r["Teplota"]}°C</td><td><i class="bi {icon}"></i></td>{traffic_cells}{park_cells}</tr>'
 
     html_content = f"""
     <!DOCTYPE html>
     <html lang="sk">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Trnava Glass Dashboard</title>
+        <title>Mondays Style Trnava</title>
         <style>
-            body {{ 
-                background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%); 
-                min-height: 100vh; font-family: 'Inter', sans-serif; padding: 40px 10px; color: #444;
-            }}
-            .glass-shell {{
-                background: rgba(255, 255, 255, 0.75);
-                backdrop-filter: blur(15px);
-                border-radius: 40px;
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                max-width: 1240px; margin: auto; padding: 35px;
-                box-shadow: 0 25px 50px rgba(0,0,0,0.05);
-            }}
-            .nav-bar {{ display: flex; justify-content: center; gap: 15px; margin-bottom: 35px; flex-wrap: wrap; }}
-            .nav-item {{ background: #fff; padding: 10px 22px; border-radius: 100px; font-weight: 600; font-size: 0.8rem; box-shadow: 0 4px 10px rgba(0,0,0,0.02); border: none; color: #666; }}
-            .nav-item.active {{ background: #1a1a1a; color: #fff; }}
-            .hero-title {{ font-size: clamp(1.8rem, 5vw, 2.6rem); font-weight: 800; letter-spacing: -1.5px; margin-bottom: 35px; color: #1a1a1a; text-align: center; }}
-            .stats-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 35px; }}
-            .info-card {{ background: #fff; border-radius: 28px; padding: 22px; border: 1px solid rgba(255,255,255,0.9); }}
-            .card-label {{ font-size: 0.7rem; font-weight: 700; color: #999; text-transform: uppercase; letter-spacing: 1px; }}
-            .card-val {{ font-size: 1.8rem; font-weight: 800; display: block; margin: 8px 0; color: #1a1a1a; }}
-            .table-wrap {{ background: rgba(255,255,255,0.4); border-radius: 28px; padding: 15px; overflow-x: auto; }}
-            .glass-table {{ width: 100%; border-collapse: collapse; min-width: 900px; }}
-            .glass-table th {{ padding: 12px; font-size: 0.6rem; text-transform: uppercase; color: #aaa; font-weight: 800; text-align: center; }}
-            .glass-table td {{ padding: 16px 8px; text-align: center; border-bottom: 1px solid rgba(0,0,0,0.03); font-size: 0.85rem; font-weight: 600; }}
-            .time-col {{ color: #000; font-weight: 800 !important; text-align: left !important; padding-left: 15px !important; }}
-            .park-num {{ background: #f0f2f5; padding: 4px 10px; border-radius: 8px; font-size: 0.75rem; color: #444; }}
-            .traffic-val {{ font-family: 'Monaco', monospace; font-weight: 800; }}
+            body {{ background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #111; }}
+            .sidebar {{ width: 240px; height: 100vh; background: #f9f9f9; position: fixed; padding: 40px 20px; border-right: 1px solid #eee; }}
+            .main {{ margin-left: 240px; padding: 60px; }}
+            .logo {{ font-weight: 700; font-size: 1.4rem; margin-bottom: 50px; display: flex; align-items: center; gap: 10px; }}
+            .nav-item {{ padding: 10px 15px; border-radius: 8px; color: #666; text-decoration: none; display: block; margin-bottom: 5px; font-weight: 500; }}
+            .nav-item.active {{ background: #e8f0fe; color: #1a73e8; }}
+            .nav-item i {{ margin-right: 12px; }}
+            
+            .greeting {{ font-size: 2rem; font-weight: 700; margin-bottom: 10px; }}
+            .sub-greeting {{ color: #666; margin-bottom: 40px; display: flex; gap: 20px; font-weight: 500; font-size: 0.9rem; }}
+            .sub-greeting span {{ display: flex; align-items: center; gap: 8px; }}
+            
+            .section-title {{ font-weight: 700; font-size: 1.1rem; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; }}
+            .table-container {{ border: 1px solid #eee; border-radius: 12px; overflow: hidden; }}
+            .custom-table {{ width: 100%; border-collapse: collapse; }}
+            .custom-table th {{ background: #fafafa; padding: 15px; text-align: center; font-size: 0.75rem; color: #888; text-transform: uppercase; border-bottom: 1px solid #eee; }}
+            .custom-table td {{ padding: 15px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #444; }}
+            .time-col {{ text-align: left !important; padding-left: 25px !important; color: #888 !important; }}
+            
+            .status-pill {{ padding: 4px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 600; display: inline-block; }}
+            .status-green {{ background: #e6f7ed; color: #1db45a; }}
+            .status-orange {{ background: #fff4e5; color: #ff9800; }}
+            .status-red {{ background: #fdeaea; color: #f44336; }}
+            
+            .search-bar {{ background: #f1f1f1; border: none; border-radius: 8px; padding: 8px 15px; width: 300px; font-size: 0.9rem; }}
         </style>
     </head>
     <body>
-        <div class="glass-shell">
-            <div class="nav-bar">
-                <button class="nav-item active">Live Monitor</button>
-                <button class="nav-item">Doprava</button>
-                <button class="nav-item">Parkovanie</button>
-                <button class="nav-item">Systém</button>
-            </div>
+        <div class="sidebar">
+            <div class="logo">TrnavaPulse</div>
+            <a href="#" class="nav-item"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="#" class="nav-item active"><i class="bi bi-geo-alt"></i> Vjazdy</a>
+            <a href="#" class="nav-item"><i class="bi bi-p-square"></i> Parkovanie</a>
+            <a href="#" class="nav-item"><i class="bi bi-gear"></i> Nastavenia</a>
+        </div>
 
-            <h1 class="hero-title">Trnava Dashboard</h1>
-
-            <div class="stats-grid">
-                <div class="info-card">
-                    <span class="card-label">Počasie</span>
-                    <span class="card-val">{teplota}°C <i class="bi {YR_ICON_MAP.get(symbol, 'bi-cloud-fill')}"></i></span>
-                    <span class="badge bg-dark rounded-pill px-3">{teraz.strftime("%H:%M")}</span>
-                </div>
-                <div class="info-card">
-                    <span class="card-label">Rybníková</span>
-                    <span class="card-val" style="color: #3182ce;">{park['Rybníková']}</span>
-                    <span class="small text-muted">voľných miest</span>
-                </div>
-                <div class="info-card text-center d-flex flex-column justify-content-center">
-                    <span class="card-label">Monitoring</span>
-                    <span class="card-val" style="color: #2f855a; font-size: 1.4rem;">AKTÍVNY</span>
-                    <span style="font-size: 0.65rem; font-weight: 700; color: #48bb78;"><i class="bi bi-circle-fill me-1"></i> SYSTÉM OK</span>
+        <div class="main">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <input type="text" class="search-bar" placeholder="Hľadať vjazdy...">
+                <div class="d-flex gap-3">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3">Zdieľať</button>
+                    <button class="btn btn-sm btn-primary rounded-pill px-3">+ Pridať pohľad</button>
                 </div>
             </div>
 
-            <div class="table-wrap">
-                <table class="glass-table">
+            <div class="greeting">Dobrý deň, Trnava!</div>
+            <div class="sub-greeting">
+                <span><i class="bi bi-clock"></i> Posledný zber: {teraz.strftime("%H:%M")}</span>
+                <span><i class="bi bi-thermometer-half"></i> Teplota: {teplota}°C</span>
+                <span><i class="bi bi-check-circle-fill text-success"></i> Systém online</span>
+            </div>
+
+            <div class="section-title">
+                <span>Moje projekty: Doprava</span>
+                <button class="btn btn-sm text-secondary">Zobraziť všetko</button>
+            </div>
+
+            <div class="table-container">
+                <table class="custom-table">
                     <thead>
                         <tr>
-                            <th>Čas</th><th>Tep.</th><th>Obloha</th>
+                            <th style="text-align:left; padding-left:25px;">Čas</th>
+                            <th>Teplota</th>
+                            <th>Obloha</th>
                             {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
-                            <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
+                            <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
                         </tr>
                     </thead>
                     <tbody>{rows_html}</tbody>
                 </table>
             </div>
-            <p class="text-center mt-4 small text-muted">Dáta: MET Norway, TomTom, OpenData Trnava</p>
         </div>
     </body>
     </html>
