@@ -3,162 +3,169 @@
     <html lang="sk">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Trnava Dark Hub</title>
+        <title>Trnava Logip Dashboard</title>
         <style>
-            :root {
-                --bg: #0b0e14;
-                --card: #161b22;
-                --accent: #7b42ff;
-                --text: #e6edf3;
-                --muted: #8b949e;
-            }
-            body { 
-                background-color: var(--bg); 
-                color: var(--text); 
-                font-family: 'Inter', -apple-system, sans-serif;
-                padding: 20px;
-            }
-            .glass-card {
-                background: var(--card);
-                border: 1px solid rgba(255,255,255,0.05);
-                border-radius: 24px;
-                padding: 30px;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            }
-            .header-zone { margin-bottom: 30px; }
-            .brand { font-weight: 900; letter-spacing: -1px; font-size: 1.8rem; background: linear-gradient(90deg, #fff, #7b42ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-            .status-chip { background: rgba(123, 66, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 6px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }
+            body { background-color: #f7f9fc; font-family: 'Inter', sans-serif; color: #1a202c; }
+            .sidebar { width: 240px; height: 100vh; background: #fff; position: fixed; padding: 30px 20px; border-right: 1px solid #e2e8f0; }
+            .main-content { margin-left: 240px; padding: 40px; }
+            .logo { font-weight: 800; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; margin-bottom: 50px; }
+            .nav-link { color: #718096; font-weight: 500; padding: 12px 15px; border-radius: 12px; margin-bottom: 5px; display: block; text-decoration: none; }
+            .nav-link.active { background: #f7f9fc; color: #1a202c; }
+            .nav-link i { margin-right: 12px; }
             
-            .main-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-            .main-table thead th { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 10px; border: 0; text-align: center; }
-            .main-table tbody tr { background: rgba(255,255,255,0.02); transition: 0.3s; }
-            .main-table tbody tr:hover { background: rgba(255,255,255,0.05); transform: scale(1.005); }
-            .main-table tbody td { padding: 16px 10px; border: 0; font-size: 0.85rem; text-align: center; color: var(--text); }
-            .main-table tbody td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
-            .main-table tbody td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+            .header-flex { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+            .card-stat { background: #fff; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; height: 100%; }
+            .stat-label { color: #718096; font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; display: block; }
+            .stat-value { font-size: 1.8rem; font-weight: 800; }
             
-            .time-cell { color: var(--accent) !important; font-weight: 800; }
-            .temp-cell { font-weight: 700; font-size: 1rem; }
-            .weather-cell i { font-size: 1.4rem; color: #fff; }
-            .park-val { background: #21262d; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: #58a6ff; }
+            .table-card { background: #fff; border-radius: 24px; padding: 30px; border: 1px solid #e2e8f0; margin-top: 30px; }
+            .custom-table { width: 100%; border-collapse: collapse; }
+            .custom-table th { color: #a0aec0; font-size: 0.75rem; text-transform: uppercase; padding: 15px 10px; font-weight: 700; text-align: center; border-bottom: 1px solid #edf2f7; }
+            .custom-table td { padding: 20px 10px; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; text-align: center; }
             
-            .footer { margin-top: 30px; color: var(--muted); font-size: 0.7rem; }
-            .legend-item { display: inline-flex; align-items: center; margin-right: 20px; }
-            .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+            .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }
+            .park-pill { background: #edf2f7; padding: 5px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; }
+            .upgrade-box { background: #edf2f7; border-radius: 20px; padding: 20px; margin-top: auto; text-align: center; }
         </style>
     </head>
     <body>
-        <div class="container-fluid">
-            <div class="glass-card">
-                <div class="header-zone d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h1 class="brand">STAKENT® TRNAVA HUB</h1>
-                        <p style="color: var(--muted); margin: 0; font-size: 0.8rem;">Live traffic and infrastructure monitoring</p>
-                    </div>
-                    <div class="status-chip">
-                        <i class="bi bi-broadcast me-2"></i>LIVE: 2026-04-27 11:41:09
+        <div class="sidebar d-none d-lg-block">
+            <div class="logo"><i class="bi bi-grid-fill text-primary"></i> TT-Logip</div>
+            <a href="#" class="nav-link active"><i class="bi bi-house"></i> Dashboard</a>
+            <a href="#" class="nav-link"><i class="bi bi-map"></i> Mapa mesta</a>
+            <a href="#" class="nav-link"><i class="bi bi-bar-chart"></i> Analýzy</a>
+            <a href="#" class="nav-link"><i class="bi bi-gear"></i> Nastavenia</a>
+            
+            <div class="upgrade-box" style="margin-top: 150px;">
+                <p style="font-weight:700; font-size:0.9rem; margin-bottom:5px;">Trnava Monitor</p>
+                <p style="font-size:0.75rem; color:#718096;">Live dáta z mestskej infraštruktúry</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header-flex">
+                <div>
+                    <h2 style="font-weight:800;">Ahoj, Trnava! 👋</h2>
+                    <p style="color:#718096; margin:0;">Tu je aktuálny stav tvojich ulíc a parkovísk.</p>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-weight:700;">27. April 2026</span><br>
+                    <span class="badge bg-light text-dark border">2026-04-27 11:47:19</span>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">AKTUÁLNA TEPLOTA</span>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-value">13.3°C</div>
+                            <i class="bi bi-cloud-sun" style="font-size:2rem; color:#4a5568;"></i>
+                        </div>
+                        <span style="color:#4fd1c5; font-size:0.8rem; font-weight:700;">Skoro jasno</span>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">PARKOVISKO RYBNÍKOVÁ</span>
+                        <div class="stat-value text-primary">N/A</div>
+                        <span style="color:#718096; font-size:0.8rem;">voľných miest</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">NAJHORŠÍ VJAZD</span>
+                        <div class="stat-value" style="color:#f56565;">79.49%</div>
+                        <span style="color:#718096; font-size:0.8rem;">minimálna plynulosť</span>
+                    </div>
+                </div>
+            </div>
 
+            <div class="table-card">
+                <h5 style="font-weight:800; margin-bottom:25px;">História monitoringu</h5>
                 <div class="table-responsive">
-                    <table class="main-table">
+                    <table class="custom-table">
                         <thead>
                             <tr>
-                                <th class="text-start ps-4">Time</th>
-                                <th>Temp</th>
-                                <th>Sky</th>
+                                <th>Čas</th><th>Teplota</th><th>Obloha</th>
                                 <th>Zelenec</th><th>Bucany</th><th>Zavar</th><th>Nitrianska</th><th>Hrnciarovce</th><th>Biely_Kostol</th><th>Sucha</th><th>Spacince</th><th>Ruzindol</th><th>Boleraz</th>
-                                <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
+                                <th>Rybníková</th><th>Hosp.</th><th>Kollár.</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr>
-            <td class="time-cell">10:11</td>
-            <td class="temp-cell">13.12°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ff0055; font-weight: 800;">53.85%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:16</td>
-            <td class="temp-cell">13.12°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:28</td>
-            <td class="temp-cell">13.67°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">79.49%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:32</td>
-            <td class="temp-cell">13.67°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">77.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">67.44%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:38</td>
-            <td class="temp-cell">13.67°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">76.92%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ff0055; font-weight: 800;">51.16%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:44</td>
-            <td class="temp-cell">14.78°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:48</td>
-            <td class="temp-cell">14.78°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">61.54%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:53</td>
-            <td class="temp-cell">14.78°</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">80.72%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">10:59</td>
-            <td class="temp-cell">11.6°</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">75.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">11:04</td>
-            <td class="temp-cell">11.6°</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">67.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.55%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">11:35</td>
-            <td class="temp-cell">13.3°</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">67.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">76.19%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">11:41</td>
-            <td class="temp-cell">13.3°</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
-            <td><span style="color: #ffea00; font-weight: 800;">71.79%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">76.74%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
-            <td><span class='park-val'>N/A</span></td><td><span class='park-val'>N/A</span></td><td><span class='park-val'>N/A</span></td>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:32</td>
+            <td style="font-weight:700;">13.67°C</td>
+            <td><i class="bi bi-cloud" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>77.5%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>67.44%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
         </tr>
-                        </tbody>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:38</td>
+            <td style="font-weight:700;">13.67°C</td>
+            <td><i class="bi bi-cloud" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>76.92%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f56565"></span>51.16%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:44</td>
+            <td style="font-weight:700;">14.78°C</td>
+            <td><i class="bi bi-cloud" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>62.5%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:48</td>
+            <td style="font-weight:700;">14.78°C</td>
+            <td><i class="bi bi-cloud" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>61.54%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:53</td>
+            <td style="font-weight:700;">14.78°C</td>
+            <td><i class="bi bi-cloud" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>62.5%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>80.72%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">10:59</td>
+            <td style="font-weight:700;">11.6°C</td>
+            <td><i class="bi bi-cloud-sun" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>75.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">11:04</td>
+            <td style="font-weight:700;">11.6°C</td>
+            <td><i class="bi bi-cloud-sun" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>67.5%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>79.55%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">11:35</td>
+            <td style="font-weight:700;">13.3°C</td>
+            <td><i class="bi bi-cloud-sun" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>67.5%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>76.19%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>79.07%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">11:41</td>
+            <td style="font-weight:700;">13.3°C</td>
+            <td><i class="bi bi-cloud-sun" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>71.79%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>76.74%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td><td><span class="park-pill">nan</span></td>
+        </tr>
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">11:47</td>
+            <td style="font-weight:700;">13.3°C</td>
+            <td><i class="bi bi-cloud-sun" style="font-size:1.2rem;"></i></td>
+            <td><span class="status-dot" style="background:#f6ad55"></span>79.49%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#f6ad55"></span>82.69%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td><td><span class="status-dot" style="background:#4fd1c5"></span>100.0%</td>
+            <td><span class="park-pill">N/A</span></td><td><span class="park-pill">N/A</span></td><td><span class="park-pill">N/A</span></td>
+        </tr></tbody>
                     </table>
-                </div>
-
-                <div class="footer d-flex justify-content-between align-items-center flex-wrap">
-                    <div>
-                        <span class="legend-item"><span class="dot" style="background:#00ffa3"></span> Optimal</span>
-                        <span class="legend-item"><span class="dot" style="background:#ffea00"></span> Busy</span>
-                        <span class="legend-item"><span class="dot" style="background:#ff0055"></span> Jam</span>
-                    </div>
-                    <div>Powered by MET Norway & TomTom API</div>
                 </div>
             </div>
         </div>
