@@ -6,6 +6,8 @@ import pytz
 
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
+
+# Definícia vjazdov do Trnavy
 VJAZDY = {
     "Zdrzanie_Zelenec (min)": "48.3615,17.5855",
     "Zdrzanie_Bucany (min)": "48.3932,17.6105",
@@ -19,6 +21,7 @@ VJAZDY = {
     "Zdrzanie_Hrnciarovce (min)": "48.3555,17.5755"
 }
 
+# Mapovanie YR.no symbolov na Bootstrap Icons (monochromatické)
 YR_ICON_MAP = {
     "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
     "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
@@ -27,6 +30,7 @@ YR_ICON_MAP = {
     "lightrain": "bi-cloud-drizzle", "lightrainshowers": "bi-cloud-drizzle"
 }
 
+# Prekladový slovník pre YR.no
 YR_PREKLAD = {
     "clearsky": "Jasno", "fair": "Skoro jasno", "partlycloudy": "Polooblačno",
     "cloudy": "Oblačno", "rain": "Dážď", "heavyrain": "Silný dážď",
@@ -49,7 +53,7 @@ def ziskaj_pocasi_yr():
     try:
         lat, lon = 48.3775, 17.5883
         url = f"https://api.met.no/weatherapi/locationforecast/2.0/compact?lat={lat}&lon={lon}"
-        headers = {'User-Agent': 'TrnavaTrafficMonitor/1.0'}
+        headers = {'User-Agent': 'TrnavaMonitor/1.0 github.com/user'}
         res = requests.get(url, headers=headers, timeout=10).json()
         current = res['properties']['timeseries'][0]['data']
         teplota = current['instant']['details']['air_temperature']
@@ -81,17 +85,21 @@ def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
     cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
     
+    # 1. Počasie
     teplota, symbol, popis = ziskaj_pocasi_yr()
     novy_riadok = {"Čas zberu": cas_zberu, "Teplota (°C)": teplota, "Počasie": popis, "Ikona": symbol}
 
+    # 2. Doprava
     for nazov, suradnice in VJAZDY.items():
         novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
 
+    # 3. Parkovanie
     parkoviska = ziskaj_vsetky_parkoviska()
     novy_riadok["P_Rybnikova"] = parkoviska["Rybníková"]
     novy_riadok["P_Hospodarska"] = parkoviska["Hospodárska"]
     novy_riadok["P_Kollarova"] = parkoviska["Kollárova"]
 
+    # --- DATAFRAME A EXCEL ---
     poradie = [
         "Čas zberu", "Teplota (°C)", "Počasie", "Ikona",
         "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
@@ -109,42 +117,45 @@ def zber_dat():
     df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    df_web = df.tail(20).copy()
+    # --- DASHBOARD GENERÁCIA (Moderný štýl) ---
+    df_web = df.tail(15).copy()
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
-    park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
     ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
+    park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
 
-    def ofarbi_plynulost(val):
+    def ofarbi_plynulost_v2(val):
         if isinstance(val, (int, float)):
-            if val >= 90: color = "success"
-            elif val >= 60: color = "warning text-dark"
-            else: color = "danger"
-            return f'<span class="badge bg-{color}">{val}%</span>'
+            if val >= 90: color, text = "rgba(40, 167, 69, 0.1)", "#1e7e34"
+            elif val >= 60: color, text = "rgba(255, 193, 7, 0.15)", "#856404"
+            else: color, text = "rgba(220, 53, 69, 0.1)", "#bd2130"
+            return f'<span class="traffic-badge" style="background-color: {color}; color: {text};">{val}%</span>'
         return val
 
     rows_html = ""
     for _, row in df_web.iterrows():
         icon_class = YR_ICON_MAP.get(row['Ikona'], "bi-cloud")
-        icon_html = f'<i class="bi {icon_class}" style="font-size: 1.4rem; color: #333;"></i>'
+        time_obj = datetime.strptime(row['Čas zberu'], "%Y-%m-%d %H:%M:%S")
+        time_display = time_obj.strftime("%H:%M")
+        
         rows_html += f"""<tr>
-            <td>{row['Čas zberu']}</td>
-            <td>{row['Teplota (°C)']}°C</td>
-            <td>{icon_html}<br><span style='font-size: 0.7rem;'>{row['Počasie']}</span></td>
-            {"".join([f"<td>{ofarbi_plynulost(row[col])}</td>" for col in vjazdy_cols])}
-            {"".join([f"<td><span class='badge bg-light text-dark border'>{row[col]}</span></td>" for col in park_cols])}
+            <td class="time-cell">{time_display}</td>
+            <td class="temp-cell">{row["Teplota (°C)"]}°C</td>
+            <td class="weather-cell"><i class="bi {icon_class}"></i> {row["Počasie"]}</td>
+            {"".join([f"<td>{ofarbi_plynulost_v2(row[col])}</td>" for col in vjazdy_cols])}
+            {"".join([f"<td><span class='park-badge'>{row[col]}</span></td>" for col in park_cols])}
         </tr>"""
 
     html_table = f"""
-    <table class="table table-hover table-striped border text-center align-middle mb-0">
-        <thead class="table-dark">
-            <tr>
-                <th rowspan="2" class="align-middle">Čas zberu</th>
+    <table class="table table-hover app-table">
+        <thead>
+            <tr class="header-main">
+                <th rowspan="2" class="align-middle text-start ps-4">Čas</th>
                 <th rowspan="2" class="align-middle">Teplota</th>
-                <th rowspan="2" class="align-middle">Počasie</th>
-                <th colspan="{len(vjazdy_cols)}" class="border-bottom">Plynulosť dopravy (%)</th>
-                <th colspan="3" class="border-bottom">Voľné miesta</th>
+                <th rowspan="2" class="align-middle">Obloha</th>
+                <th colspan="{len(vjazdy_cols)}" class="traffic-header">Plynulosť dopravy (%)</th>
+                <th colspan="3" class="park-header">Voľné miesta</th>
             </tr>
-            <tr>
+            <tr class="subheader">
                 {"".join([f"<th>{n}</th>" for n in ciste_nazvy_vjazdy])}
                 <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
             </tr>
@@ -153,45 +164,59 @@ def zber_dat():
     </table>"""
 
     html_content = f"""
-    <html>
+    <!DOCTYPE html>
+    <html lang="sk">
     <head>
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Trnava Smart Dashboard</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+        <title>Trnava Smart Monitor</title>
         <style>
-            body {{ background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }}
-            .container-fluid {{ background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); margin-top: 20px; max-width: 99%; }}
-            h2 {{ color: #1a2a6c; font-weight: 800; }}
-            .table {{ font-size: 0.72rem; }}
-            th {{ font-weight: 700; font-size: 0.6rem; text-transform: uppercase; }}
-            .badge {{ font-weight: 600; width: 45px; }}
-            footer {{ font-size: 0.75rem; color: #6c757d; margin-top: 20px; padding: 20px 0; border-top: 1px solid #dee2e6; }}
-            .legend-dot {{ width: 10px; height: 10px; display: inline-block; border-radius: 50%; margin-right: 5px; }}
+            :root {{ --bg: #f4f7fa; --card: #ffffff; --text: #2d3748; --primary: #1a365d; }}
+            body {{ background-color: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); padding-top: 20px; }}
+            .main-card {{ 
+                background: var(--card); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
+                margin: 0 auto; max-width: 98%; overflow: hidden; border: 1px solid #e2e8f0;
+            }}
+            .app-header {{ padding: 25px 30px; border-bottom: 1px solid #edf2f7; background: #fff; }}
+            .app-title {{ font-weight: 800; color: var(--primary); letter-spacing: -0.5px; margin: 0; font-size: 1.5rem; }}
+            .update-badge {{ background: #edf2f7; color: #4a5568; font-weight: 600; font-size: 0.75rem; padding: 8px 14px; border-radius: 8px; }}
+            .app-table {{ margin: 0; width: 100%; }}
+            .app-table thead {{ background: #f8fafc; }}
+            .header-main th {{ font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #718096; padding: 15px 10px; border: 0; }}
+            .subheader th {{ font-size: 0.6rem; color: #a0aec0; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; }}
+            .app-table tbody td {{ padding: 14px 10px; font-size: 0.8rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }}
+            .time-cell {{ text-align: left !important; padding-left: 30px !important; font-weight: 700; color: var(--primary); }}
+            .temp-cell {{ font-weight: 700; color: #2d3748; }}
+            .weather-cell {{ color: #4a5568; white-space: nowrap; }}
+            .weather-cell i {{ font-size: 1.2rem; margin-right: 6px; vertical-align: middle; }}
+            .traffic-badge {{ font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; display: inline-block; min-width: 50px; }}
+            .park-badge {{ background: #f1f5f9; color: var(--primary); font-weight: 700; padding: 5px 10px; border-radius: 6px; display: inline-block; min-width: 45px; }}
+            .app-footer {{ padding: 20px 30px; background: #f8fafc; color: #718096; font-size: 0.75rem; }}
+            .legend-dot {{ width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }}
         </style>
     </head>
-    <body class="p-1 p-md-3">
-        <div class="container-fluid">
-            <div class="d-flex justify-content-between align-items-center mb-4">
+    <body>
+        <div class="main-card">
+            <div class="app-header d-flex justify-content-between align-items-center">
                 <div>
-                    <h2 class="mb-0 text-uppercase" style="letter-spacing: 1px;">Trnava Monitor</h2>
+                    <h2 class="app-title text-uppercase">Trnava Monitor</h2>
+                    <span class="text-muted small">Mestský dashboard v reálnom čase</span>
                 </div>
-                <span class="badge bg-dark w-auto p-2">Posledná aktualizácia: {cas_zberu}</span>
+                <span class="update-badge"><i class="bi bi-arrow-repeat me-1"></i> {cas_zberu}</span>
             </div>
-            
-            <div class="table-responsive">{html_table}</div>
-
-            <footer class="text-center">
-                <div class="mb-2">
-                    <span class="me-3"><span class="legend-dot bg-success"></span> 90-100% Plynulá</span>
-                    <span class="me-3"><span class="legend-dot bg-warning"></span> 60-89% Zhustená</span>
-                    <span class="me-3"><span class="legend-dot bg-danger"></span> pod 60% Zápcha</span>
+            <div class="table-responsive">
+                {html_table}
+            </div>
+            <div class="app-footer d-flex justify-content-between align-items-center flex-wrap">
+                <div class="d-flex gap-4">
+                    <span><span class="legend-dot" style="background:#28a745"></span>Plynulá</span>
+                    <span><span class="legend-dot" style="background:#ffc107"></span>Zhustená</span>
+                    <span><span class="legend-dot" style="background:#dc3545"></span>Zápcha</span>
                 </div>
-                <div>
-                    <strong>Zdroje dát:</strong> MET Norway (Počasie), TomTom (Doprava), Mesto Trnava (Parkovanie)
-                </div>
-            </footer>
+                <div class="small">Zdroje: MET Norway, TomTom, Opendata Trnava</div>
+            </div>
         </div>
     </body>
     </html>"""
