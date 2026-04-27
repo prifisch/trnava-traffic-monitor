@@ -6,158 +6,162 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Trnava Smart Monitor</title>
+        <title>Trnava Dark Hub</title>
         <style>
-            :root { --bg: #f4f7fa; --card: #ffffff; --text: #2d3748; --primary: #1a365d; }
-            body { background-color: var(--bg); font-family: 'Segoe UI', system-ui, sans-serif; color: var(--text); padding-top: 20px; }
-            .main-card { 
-                background: var(--card); border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); 
-                margin: 0 auto; max-width: 98%; overflow: hidden; border: 1px solid #e2e8f0;
+            :root {
+                --bg: #0b0e14;
+                --card: #161b22;
+                --accent: #7b42ff;
+                --text: #e6edf3;
+                --muted: #8b949e;
             }
-            .app-header { padding: 25px 30px; border-bottom: 1px solid #edf2f7; background: #fff; }
-            .app-title { font-weight: 800; color: var(--primary); letter-spacing: -0.5px; margin: 0; font-size: 1.5rem; }
-            .update-badge { background: #edf2f7; color: #4a5568; font-weight: 600; font-size: 0.75rem; padding: 8px 14px; border-radius: 8px; }
-            .app-table { margin: 0; width: 100%; }
-            .app-table thead { background: #f8fafc; }
-            .header-main th { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; color: #718096; padding: 15px 10px; border: 0; }
-            .subheader th { font-size: 0.6rem; color: #a0aec0; border-bottom: 1px solid #edf2f7; padding-bottom: 10px; }
-            .app-table tbody td { padding: 14px 10px; font-size: 0.8rem; border-bottom: 1px solid #f1f5f9; vertical-align: middle; text-align: center; }
-            .time-cell { text-align: left !important; padding-left: 30px !important; font-weight: 700; color: var(--primary); }
-            .temp-cell { font-weight: 700; color: #2d3748; }
-            .weather-cell { color: #4a5568; white-space: nowrap; }
-            .weather-cell i { font-size: 1.2rem; margin-right: 6px; vertical-align: middle; }
-            .traffic-badge { font-weight: 700; font-size: 0.75rem; padding: 5px 10px; border-radius: 6px; display: inline-block; min-width: 50px; }
-            .park-badge { background: #f1f5f9; color: var(--primary); font-weight: 700; padding: 5px 10px; border-radius: 6px; display: inline-block; min-width: 45px; }
-            .app-footer { padding: 20px 30px; background: #f8fafc; color: #718096; font-size: 0.75rem; }
-            .legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+            body { 
+                background-color: var(--bg); 
+                color: var(--text); 
+                font-family: 'Inter', -apple-system, sans-serif;
+                padding: 20px;
+            }
+            .glass-card {
+                background: var(--card);
+                border: 1px solid rgba(255,255,255,0.05);
+                border-radius: 24px;
+                padding: 30px;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            }
+            .header-zone { margin-bottom: 30px; }
+            .brand { font-weight: 900; letter-spacing: -1px; font-size: 1.8rem; background: linear-gradient(90deg, #fff, #7b42ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+            .status-chip { background: rgba(123, 66, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 6px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }
+            
+            .main-table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+            .main-table thead th { color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 10px; border: 0; text-align: center; }
+            .main-table tbody tr { background: rgba(255,255,255,0.02); transition: 0.3s; }
+            .main-table tbody tr:hover { background: rgba(255,255,255,0.05); transform: scale(1.005); }
+            .main-table tbody td { padding: 16px 10px; border: 0; font-size: 0.85rem; text-align: center; color: var(--text); }
+            .main-table tbody td:first-child { border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+            .main-table tbody td:last-child { border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+            
+            .time-cell { color: var(--accent) !important; font-weight: 800; }
+            .temp-cell { font-weight: 700; font-size: 1rem; }
+            .weather-cell i { font-size: 1.4rem; color: #fff; }
+            .park-val { background: #21262d; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: #58a6ff; }
+            
+            .footer { margin-top: 30px; color: var(--muted); font-size: 0.7rem; }
+            .legend-item { display: inline-flex; align-items: center; margin-right: 20px; }
+            .dot { width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
         </style>
     </head>
     <body>
-        <div class="main-card">
-            <div class="app-header d-flex justify-content-between align-items-center">
-                <div>
-                    <h2 class="app-title text-uppercase">Trnava Monitor</h2>
-                    <span class="text-muted small">Mestský dashboard v reálnom čase</span>
+        <div class="container-fluid">
+            <div class="glass-card">
+                <div class="header-zone d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h1 class="brand">STAKENT® TRNAVA HUB</h1>
+                        <p style="color: var(--muted); margin: 0; font-size: 0.8rem;">Live traffic and infrastructure monitoring</p>
+                    </div>
+                    <div class="status-chip">
+                        <i class="bi bi-broadcast me-2"></i>LIVE: 2026-04-27 11:41:09
+                    </div>
                 </div>
-                <span class="update-badge"><i class="bi bi-arrow-repeat me-1"></i> 2026-04-27 11:35:30</span>
-            </div>
-            <div class="table-responsive">
-                
-    <table class="table table-hover app-table">
-        <thead>
-            <tr class="header-main">
-                <th rowspan="2" class="align-middle text-start ps-4">Čas</th>
-                <th rowspan="2" class="align-middle">Teplota</th>
-                <th rowspan="2" class="align-middle">Obloha</th>
-                <th colspan="10" class="traffic-header">Plynulosť dopravy (%)</th>
-                <th colspan="3" class="park-header">Voľné miesta</th>
-            </tr>
-            <tr class="subheader">
-                <th>Zelenec</th><th>Bucany</th><th>Zavar</th><th>Nitrianska</th><th>Hrnciarovce</th><th>Biely_Kostol</th><th>Sucha</th><th>Spacince</th><th>Ruzindol</th><th>Boleraz</th>
-                <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
-            </tr>
-        </thead>
-        <tbody><tr>
-            <td class="time-cell">09:27</td>
-            <td class="temp-cell">12.56°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> scattered clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">60.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">61.36%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">09:45</td>
-            <td class="temp-cell">12.56°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">62.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">09:55</td>
-            <td class="temp-cell">13.12°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130;">55.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
-        </tr><tr>
-            <td class="time-cell">09:58</td>
-            <td class="temp-cell">13.12°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130;">56.41%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
-        </tr><tr>
+
+                <div class="table-responsive">
+                    <table class="main-table">
+                        <thead>
+                            <tr>
+                                <th class="text-start ps-4">Time</th>
+                                <th>Temp</th>
+                                <th>Sky</th>
+                                <th>Zelenec</th><th>Bucany</th><th>Zavar</th><th>Nitrianska</th><th>Hrnciarovce</th><th>Biely_Kostol</th><th>Sucha</th><th>Spacince</th><th>Ruzindol</th><th>Boleraz</th>
+                                <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
             <td class="time-cell">10:11</td>
-            <td class="temp-cell">13.12°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130;">53.85%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">13.12°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ff0055; font-weight: 800;">53.85%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:16</td>
-            <td class="temp-cell">13.12°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">62.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">79.07%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">13.12°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:28</td>
-            <td class="temp-cell">13.67°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">79.49%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">79.07%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">13.67°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">79.49%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:32</td>
-            <td class="temp-cell">13.67°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> scattered clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">77.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">67.44%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">13.67°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">77.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">67.44%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:38</td>
-            <td class="temp-cell">13.67°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> broken clouds</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">76.92%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(220, 53, 69, 0.1); color: #bd2130;">51.16%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">13.67°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">76.92%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ff0055; font-weight: 800;">51.16%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:44</td>
-            <td class="temp-cell">14.78°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> Polojasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">62.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">14.78°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:48</td>
-            <td class="temp-cell">14.78°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> Polojasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">61.54%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">14.78°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">61.54%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:53</td>
-            <td class="temp-cell">14.78°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud"></i> Polojasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">62.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">80.72%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">14.78°</td>
+            <td class="weather-cell"><i class="bi bi-cloud"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">62.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">80.72%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">10:59</td>
-            <td class="temp-cell">11.6°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i> Skoro jasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">75.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">11.6°</td>
+            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">75.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">11:04</td>
-            <td class="temp-cell">11.6°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i> Skoro jasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">67.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">79.55%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td><td><span class='park-badge'>nan</span></td>
+            <td class="temp-cell">11.6°</td>
+            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">67.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.55%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
         </tr><tr>
             <td class="time-cell">11:35</td>
-            <td class="temp-cell">13.3°C</td>
-            <td class="weather-cell"><i class="bi bi-cloud-sun"></i> Skoro jasno</td>
-            <td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">67.5%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">76.19%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(255, 193, 7, 0.15); color: #856404;">79.07%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td><td><span class="traffic-badge" style="background-color: rgba(40, 167, 69, 0.1); color: #1e7e34;">100.0%</span></td>
-            <td><span class='park-badge'>N/A</span></td><td><span class='park-badge'>N/A</span></td><td><span class='park-badge'>N/A</span></td>
-        </tr></tbody>
-    </table>
-            </div>
-            <div class="app-footer d-flex justify-content-between align-items-center flex-wrap">
-                <div class="d-flex gap-4">
-                    <span><span class="legend-dot" style="background:#28a745"></span>Plynulá</span>
-                    <span><span class="legend-dot" style="background:#ffc107"></span>Zhustená</span>
-                    <span><span class="legend-dot" style="background:#dc3545"></span>Zápcha</span>
+            <td class="temp-cell">13.3°</td>
+            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">67.5%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">76.19%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">79.07%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td><td><span class='park-val'>nan</span></td>
+        </tr><tr>
+            <td class="time-cell">11:41</td>
+            <td class="temp-cell">13.3°</td>
+            <td class="weather-cell"><i class="bi bi-cloud-sun"></i></td>
+            <td><span style="color: #ffea00; font-weight: 800;">71.79%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #ffea00; font-weight: 800;">76.74%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td><td><span style="color: #00ffa3; font-weight: 800;">100.0%</span></td>
+            <td><span class='park-val'>N/A</span></td><td><span class='park-val'>N/A</span></td><td><span class='park-val'>N/A</span></td>
+        </tr>
+                        </tbody>
+                    </table>
                 </div>
-                <div class="small">Zdroje: MET Norway, TomTom, Opendata Trnava</div>
+
+                <div class="footer d-flex justify-content-between align-items-center flex-wrap">
+                    <div>
+                        <span class="legend-item"><span class="dot" style="background:#00ffa3"></span> Optimal</span>
+                        <span class="legend-item"><span class="dot" style="background:#ffea00"></span> Busy</span>
+                        <span class="legend-item"><span class="dot" style="background:#ff0055"></span> Jam</span>
+                    </div>
+                    <div>Powered by MET Norway & TomTom API</div>
+                </div>
             </div>
         </div>
     </body>
     </html>
+    
