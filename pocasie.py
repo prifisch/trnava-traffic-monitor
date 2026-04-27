@@ -60,5 +60,136 @@ def zber_dat():
         "Počasie": w_data['weather'][0]['description'] if 'weather' in w_data else "neznáme"
     }
 
-    # 2. Doprava
-    for nazov, sur
+    # 2. Doprava - TU BOLA CHYBA V PREDCHÁDZAJÚCOM KÓDE
+    for nazov, suradnice in VJAZDY.items():
+        novy_riadok[nazov] = ziskaj_plynulost(nazov, suradnice)
+
+    # 3. Parkovanie
+    novy_riadok["volne_rybnikova"] = ziskaj_parkovanie()
+
+    # --- DEFINÍCIA PORADIA PRE EXCEL ---
+    poradie = [
+        "Čas zberu", "Teplota (°C)", "Počasie",
+        "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
+        "Zdrzanie_Nitrianska (min)", "Zdrzanie_Hrnciarovce (min)", "Zdrzanie_Biely_Kostol (min)",
+        "Zdrzanie_Sucha (min)", "Zdrzanie_Spacince (min)", "Zdrzanie_Ruzindol (min)",
+        "Zdrzanie_Boleraz (min)", "volne_rybnikova"
+    ]
+
+    try:
+        df = pd.read_excel("data_trnava_komplet.xlsx")
+        stare_zle = ['cas', 'teplota', 'pocasie', 'zdrzanie_min']
+        df = df.drop(columns=[c for c in stare_zle if c in df.columns], errors='ignore')
+        df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
+    except:
+        df = pd.DataFrame([novy_riadok])
+
+    for col in poradie:
+        if col not in df.columns:
+            df[col] = None
+            
+    df = df[poradie]
+    df.to_excel("data_trnava_komplet.xlsx", index=False)
+    
+    # --- VIZUÁLNY DASHBOARD (HTML) ---
+    df_web = df.tail(20).copy()
+
+    def ofarbi_plynulost(val):
+        if isinstance(val, (int, float)):
+            if val >= 90: color = "success"
+            elif val >= 60: color = "warning text-dark"
+            else: color = "danger"
+            return f'<span class="badge bg-{color}">{val}%</span>'
+        return val
+
+    vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
+    ciste_nazvy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
+
+    # Generovanie riadkov tabuľky
+    rows_html = ""
+    for _, row in df_web.iterrows():
+        rows_html += "<tr>"
+        rows_html += f"<td>{row['Čas zberu']}</td>"
+        rows_html += f"<td>{row['Teplota (°C)']}°C</td>"
+        rows_html += f"<td>{row['Počasie']}</td>"
+        
+        for col in vjazdy_cols:
+            rows_html += f"<td>{ofarbi_plynulost(row[col])}</td>"
+        
+        p_val = row['volne_rybnikova']
+        p_display = f'<span class="badge bg-light text-dark border">{p_val}</span>' if p_val != "N/A" else '<span class="text-muted small">N/A</span>'
+        rows_html += f"<td>{p_display}</td>"
+        rows_html += "</tr>"
+
+    cols_count = len(vjazdy_cols)
+    
+    html_table = f"""
+    <table class="table table-hover table-striped border text-center align-middle">
+        <thead class="table-dark">
+            <tr>
+                <th rowspan="2" class="align-middle">Čas zberu</th>
+                <th rowspan="2" class="align-middle">Teplota</th>
+                <th rowspan="2" class="align-middle">Počasie</th>
+                <th colspan="{cols_count}" class="border-bottom">Plynulosť dopravy (%)</th>
+                <th rowspan="2" class="align-middle">Parkovisko</th>
+            </tr>
+            <tr>
+                {"".join([f"<th>{n}</th>" for n in ciste_nazvy])}
+            </tr>
+        </thead>
+        <tbody>
+            {rows_html}
+        </tbody>
+    </table>
+    """
+
+    html_content = f"""
+    <html>
+    <head>
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+        <title>Trnava Traffic Dashboard</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <style>
+            body {{ background-color: #f0f2f5; font-family: 'Segoe UI', sans-serif; }}
+            .container-fluid {{ background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); margin-top: 20px; max-width: 98%; }}
+            h2 {{ color: #1a2a6c; font-weight: 800; }}
+            .table {{ font-size: 0.82rem; }}
+            th {{ font-weight: 700; font-size: 0.7rem; text-transform: uppercase; }}
+            .badge {{ font-weight: 600; width: 55px; }}
+            .badge.bg-light {{ width: auto; }}
+        </style>
+    </head>
+    <body class="p-2 p-md-4">
+        <div class="container-fluid">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+                <div>
+                    <h2>🚗 Trnava Traffic Monitor</h2>
+                    <p class="text-muted small">Live dashboard vjazdov do Trnavy</p>
+                </div>
+                <div class="mt-2 mt-md-0">
+                    <span class="badge bg-dark w-auto p-2">Aktualizácia: {cas_zberu}</span>
+                </div>
+            </div>
+            <div class="table-responsive">
+                {html_table}
+            </div>
+            <div class="mt-4 p-3 bg-light border rounded-3 text-center">
+                <div class="d-flex gap-3 flex-wrap justify-content-center">
+                    <span class="badge bg-success w-auto">90-100% Plynulá</span>
+                    <span class="badge bg-warning text-dark w-auto">60-89% Zhustená</span>
+                    <span class="badge bg-danger w-auto">pod 60% Zápcha</span>
+                    <span class="badge bg-light text-dark border w-auto">N/A - Dáta nedostupné</span>
+                </div>
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    with open("index.html", "w", encoding="utf-8") as f:
+        f.write(html_content)
+    
+    print(f"Zber úspešný: {cas_zberu}")
+
+if __name__ == "__main__":
+    zber_dat()
