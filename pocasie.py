@@ -70,15 +70,41 @@ def zber_dat():
     # 3. Parkovanie
     novy_riadok["volne_rybnikova"] = ziskaj_parkovanie()
 
-    # Načítanie a zápis
+    # 4. Excel tabuľka
+poradie_stĺpcov = [
+        "Čas zberu", 
+        "Teplota (°C)", 
+        "Počasie", 
+        "Zdrzanie_Zelenec (min)", 
+        "Zdrzanie_Bucany (min)", 
+        "Zdrzanie_Zavar (min)", 
+        "Zdrzanie_Nitrianska (min)", # Nový
+        "Zdrzanie_Hrnciarovce (min)", # Nový
+        "Zdrzanie_Biely_Kostol (min)", 
+        "Zdrzanie_Sucha (min)", 
+        "Zdrzanie_Spacince (min)", 
+        "Zdrzanie_Ruzindol (min)", 
+        "Zdrzanie_Boleraz (min)", 
+        "volne_rybnikova"
+    ]
+
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
-        # Automatické premazanie stĺpcov, ktoré tam nechceme
+        # Vymažeme staré "duchárske" stĺpce, ak existujú
         df = df.drop(columns=['cas', 'teplota', 'pocasie', 'zdrzanie_min'], errors='ignore')
+        
+        # Pridáme nový riadok
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
-    except:
-        df = pd.DataFrame([novy_riadok])
-    
+        
+        # --- TOTO JE TO KÚZLO: Zoradenie stĺpcov ---
+        # Python zoberie len tie stĺpce, ktoré sú v zozname 'poradie_stĺpcov'
+        # Ak nejaký stĺpec v zozname chýba, v Exceli sa nezobrazí
+        df = df.reindex(columns=poradie_stĺpcov)
+        
+    except Exception as e:
+        # Ak súbor neexistuje, vytvoríme ho rovno so správnym poradím
+        df = pd.DataFrame([novy_riadok], columns=poradie_stĺpcov)
+
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     print(f"Zber hotový: {cas_zberu}")
 
