@@ -20,6 +20,13 @@ VJAZDY = {
     "Hrnčiarovce": "48.3555,17.5755"
 }
 
+# Kapacity parkovísk pre výpočet vyťaženosti (odhadované/oficiálne)
+KAPACITY = {
+    "Rybníková": 150,
+    "Hospodárska": 100,
+    "Kollárova": 120
+}
+
 YR_ICON_MAP = {
     "clearsky": "bi-sun", "fair": "bi-cloud-sun", "partlycloudy": "bi-cloud-sun",
     "cloudy": "bi-clouds", "rain": "bi-cloud-rain", "heavyrain": "bi-cloud-rain-heavy",
@@ -74,6 +81,27 @@ def zber_dat():
     
     df.to_excel(excel_file, index=False)
 
+    # Generovanie kariet parkovísk (Insights)
+    park_cards_html = ""
+    for p_name, p_cap in KAPACITY.items():
+        free = park.get(p_name, 0)
+        if free == "N/A": free = 0
+        used_pct = round(100 - (free / p_cap * 100)) if p_cap > 0 else 0
+        color = "#1db45a" if used_pct < 70 else "#ff9800" if used_pct < 90 else "#f44336"
+        
+        park_cards_html += f"""
+        <div class="park-card">
+            <span class="park-card-label">{p_name.upper()}</span>
+            <div class="d-flex justify-content-between align-items-end">
+                <span class="park-card-val">{free}</span>
+                <span class="park-card-pct" style="color: {color}">{used_pct}% obsadené</span>
+            </div>
+            <div class="progress mt-2" style="height: 4px;">
+                <div class="progress-bar" style="width: {used_pct}%; background-color: {color}"></div>
+            </div>
+        </div>
+        """
+
     df_last = df.tail(10).copy()
     rows_html = ""
     for _, r in df_last.iterrows():
@@ -85,12 +113,10 @@ def zber_dat():
         for n in VJAZDY.keys():
             val = r[n] if pd.notnull(r[n]) else 100
             status_class = "status-green" if val > 85 else "status-orange" if val > 60 else "status-red"
-            status_text = "Plynulá" if val > 85 else "Zdržanie" if val > 60 else "Zápcha"
-            traffic_cells += f'<td><span class="status-pill {status_class}">{status_text} ({val}%)</span></td>'
+            traffic_cells += f'<td><span class="status-pill {status_class}">{val}%</span></td>'
         
-        park_cells = "".join([f'<td><span class="text-dark fw-bold">{r[f"P_{n}"] if pd.notnull(r[f"P_{n}"]) else "N/A"}</span></td>' for n in ["Rybníková", "Hospodárska", "Kollárova"]])
-        
-        rows_html += f'<tr><td class="time-col">{t_short}</td><td class="fw-bold">{r["Teplota"]}°C</td><td><i class="bi {icon}"></i></td>{traffic_cells}{park_cells}</tr>'
+        park_cells = "".join([f'<td><span class="fw-bold">{r[f"P_{n}"] if pd.notnull(r[f"P_{n}"]) else "N/A"}</span></td>' for n in ["Rybníková", "Hospodárska", "Kollárova"]])
+        rows_html += f'<tr><td class="time-col">{t_short}</td><td class="fw-bold">{r["Teplota"]}°</td><td><i class="bi {icon}"></i></td>{traffic_cells}{park_cells}</tr>'
 
     html_content = f"""
     <!DOCTYPE html>
@@ -99,88 +125,72 @@ def zber_dat():
         <meta charset="UTF-8">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>TrnavaPulse - Smart Dashboard</title>
+        <title>TrnavaPulse</title>
         <style>
             body {{ background-color: #ffffff; font-family: -apple-system, system-ui, sans-serif; color: #111; }}
             .sidebar {{ width: 260px; height: 100vh; background: #f9f9f9; position: fixed; padding: 40px 20px; border-right: 1px solid #eee; display: flex; flex-direction: column; }}
             .main {{ margin-left: 260px; padding: 50px; }}
-            .logo {{ font-weight: 800; font-size: 1.5rem; margin-bottom: 40px; color: #1a73e8; letter-spacing: -1px; }}
-            .nav-item {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: block; margin-bottom: 5px; font-weight: 500; transition: 0.2s; }}
-            .nav-item:hover {{ background: #f0f0f0; }}
+            .logo {{ font-weight: 800; font-size: 1.5rem; margin-bottom: 40px; color: #1a73e8; }}
+            .nav-item {{ padding: 12px 15px; border-radius: 10px; color: #555; text-decoration: none; display: block; margin-bottom: 5px; font-weight: 500; }}
             .nav-item.active {{ background: #e8f0fe; color: #1a73e8; }}
-            .nav-item i {{ margin-right: 12px; }}
             
-            .greeting {{ font-size: 2.2rem; font-weight: 800; margin-bottom: 10px; letter-spacing: -1px; }}
-            .sub-greeting {{ color: #777; margin-bottom: 35px; display: flex; gap: 20px; font-weight: 500; font-size: 0.9rem; }}
+            .greeting {{ font-size: 2.2rem; font-weight: 800; margin-bottom: 5px; letter-spacing: -1px; }}
+            .sub-greeting {{ color: #777; margin-bottom: 35px; font-size: 0.9rem; font-weight: 500; }}
             
-            .legend-box {{ background: #fff; border: 1px solid #eee; border-radius: 15px; padding: 20px; margin-bottom: 30px; }}
-            .legend-title {{ font-size: 0.75rem; font-weight: 800; text-transform: uppercase; color: #aaa; letter-spacing: 1px; margin-bottom: 15px; display: block; }}
-            
-            .table-container {{ border: 1px solid #eee; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.02); }}
+            .park-grid {{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }}
+            .park-card {{ background: #fff; border: 1px solid #eee; border-radius: 16px; padding: 20px; transition: 0.2s; }}
+            .park-card:hover {{ border-color: #1a73e8; }}
+            .park-card-label {{ font-size: 0.7rem; font-weight: 800; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }}
+            .park-card-val {{ font-size: 1.8rem; font-weight: 800; display: block; margin-top: 5px; }}
+            .park-card-pct {{ font-size: 0.75rem; font-weight: 700; }}
+
+            .table-container {{ border: 1px solid #eee; border-radius: 16px; overflow: hidden; }}
             .custom-table {{ width: 100%; border-collapse: collapse; }}
-            .custom-table th {{ background: #fafafa; padding: 18px 12px; text-align: center; font-size: 0.7rem; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; letter-spacing: 0.5px; }}
-            .custom-table td {{ padding: 16px 12px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #333; }}
+            .custom-table th {{ background: #fafafa; padding: 15px; text-align: center; font-size: 0.7rem; color: #999; text-transform: uppercase; border-bottom: 1px solid #eee; }}
+            .custom-table td {{ padding: 15px; text-align: center; border-bottom: 1px solid #eee; font-size: 0.85rem; }}
             .time-col {{ text-align: left !important; padding-left: 25px !important; font-weight: 600; color: #1a73e8 !important; }}
             
-            .status-pill {{ padding: 5px 12px; border-radius: 8px; font-size: 0.75rem; font-weight: 700; display: inline-block; min-width: 110px; }}
+            .status-pill {{ padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-block; min-width: 60px; }}
             .status-green {{ background: #e6f7ed; color: #1db45a; }}
             .status-orange {{ background: #fff4e5; color: #ff9800; }}
             .status-red {{ background: #fdeaea; color: #f44336; }}
-            
-            .source-links {{ margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.75rem; color: #aaa; }}
+
+            .source-links {{ margin-top: auto; padding-top: 20px; border-top: 1px solid #eee; font-size: 0.75rem; }}
             .source-links a {{ color: #777; text-decoration: none; display: block; margin-bottom: 8px; }}
-            .source-links a:hover {{ text-decoration: underline; color: #1a73e8; }}
         </style>
     </head>
     <body>
         <div class="sidebar">
-            <div class="logo"><i class="bi bi-broadcast-pin"></i> TT-Pulse</div>
-            <a href="#" class="nav-item active"><i class="bi bi-grid-1x2"></i> Dashboard</a>
-            <a href="#" class="nav-item"><i class="bi bi-map"></i> Mapa mesta</a>
-            <a href="#" class="nav-item"><i class="bi bi-calendar3"></i> Analýzy</a>
-            
+            <div class="logo">TT-Pulse</div>
+            <a href="#" class="nav-item active"><i class="bi bi-grid-1x2 me-2"></i> Dashboard</a>
             <div class="source-links">
-                <span style="font-weight: 700; color: #555; display: block; margin-bottom: 10px;">ZDROJE DÁT</span>
-                <a href="https://www.yr.no/en/forecast/daily-table/2-3057140/Slovakia/Trnava/Trnava" target="_blank"><i class="bi bi-cloud-sun"></i> Počasie: YR.no</a>
-                <a href="https://www.tomtom.com/en_gb/traffic-index/trnava-traffic/" target="_blank"><i class="bi bi-car-front"></i> Doprava: TomTom</a>
-                <a href="https://opendata.trnava.sk/" target="_blank"><i class="bi bi-database"></i> Parkovanie: OpenData TT</a>
+                <span class="d-block mb-2 fw-bold text-muted">ZDROJE</span>
+                <a href="https://www.yr.no" target="_blank">YR.no</a>
+                <a href="https://www.tomtom.com" target="_blank">TomTom</a>
+                <a href="https://opendata.trnava.sk" target="_blank">OpenData TT</a>
             </div>
         </div>
 
         <div class="main">
-            <div class="greeting">Prehľad Trnavy</div>
-            <div class="sub-greeting">
-                <span><i class="bi bi-clock-history"></i> Posledná aktualizácia: {teraz.strftime("%H:%M:%S")}</span>
-                <span><i class="bi bi-geo-alt"></i> Lokalita: Trnava, SK</span>
+            <div class="greeting">Prehľad parkovania</div>
+            <div class="sub-greeting">Aktuálny počet voľných miest k {teraz.strftime("%H:%M")}</div>
+
+            <div class="park-grid">
+                {park_cards_html}
             </div>
 
-            <div class="legend-box">
-                <span class="legend-title">Legenda plynulosti vjazdov</span>
-                <div class="d-flex gap-4">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-pill status-green" style="min-width: 20px; padding: 4px 8px;">Plynulá</span>
-                        <span class="small text-muted">> 85% rýchlosti</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-pill status-orange" style="min-width: 20px; padding: 4px 8px;">Zdržanie</span>
-                        <span class="small text-muted">60% - 85% rýchlosti</span>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="status-pill status-red" style="min-width: 20px; padding: 4px 8px;">Zápcha</span>
-                        <span class="small text-muted">< 60% rýchlosti</span>
-                    </div>
-                </div>
+            <div class="d-flex justify-content-between align-items-end mb-3">
+                <h5 class="fw-bold m-0">História vjazdov a parkovísk</h5>
+                <span class="small text-muted">Zobrazených posledných 10 meraní</span>
             </div>
 
             <div class="table-container">
                 <table class="custom-table">
                     <thead>
                         <tr>
-                            <th style="text-align:left; padding-left:25px;">Čas</th>
-                            <th>Tep.</th>
-                            <th>Obloha</th>
+                            <th style="text-align:left; padding-left:25px;">Čas</th><th>Tep.</th><th>Obloha</th>
                             {"".join([f"<th>{n}</th>" for n in VJAZDY.keys()])}
-                            <th>Rybníková</th><th>Hosp.</th><th>Kollár.</th>
+                            <th>Ryb.</th><th>Hosp.</th><th>Koll.</th>
                         </tr>
                     </thead>
                     <tbody>{rows_html}</tbody>
@@ -190,8 +200,6 @@ def zber_dat():
     </body>
     </html>
     """
-    with open("index.html", "w", encoding="utf-8") as f:
-        f.write(html_content)
+    with open("index.html", "w", encoding="utf-8") as f: f.write(html_content)
 
-if __name__ == "__main__":
-    zber_dat()
+if __name__ == "__main__": zber_dat()
