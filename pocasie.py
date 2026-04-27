@@ -77,7 +77,8 @@ def ziskaj_vsetky_parkoviska():
 
 def zber_dat():
     zona = pytz.timezone('Europe/Bratislava')
-    cas_zberu = datetime.now(zona).strftime("%Y-%m-%d %H:%M:%S")
+    cas_dt = datetime.now(zona)
+    cas_zberu = cas_dt.strftime("%Y-%m-%d %H:%M:%S")
     
     teplota, symbol, popis = ziskaj_pocasi_yr()
     novy_riadok = {"Čas zberu": cas_zberu, "Teplota (°C)": teplota, "Počasie": popis, "Ikona": symbol}
@@ -90,47 +91,38 @@ def zber_dat():
     novy_riadok["P_Hospodarska"] = parkoviska["Hospodárska"]
     novy_riadok["P_Kollarova"] = parkoviska["Kollárova"]
 
-    poradie = [
-        "Čas zberu", "Teplota (°C)", "Počasie", "Ikona",
-        "Zdrzanie_Zelenec (min)", "Zdrzanie_Bucany (min)", "Zdrzanie_Zavar (min)",
-        "Zdrzanie_Nitrianska (min)", "Zdrzanie_Hrnciarovce (min)", "Zdrzanie_Biely_Kostol (min)",
-        "Zdrzanie_Sucha (min)", "Zdrzanie_Spacince (min)", "Zdrzanie_Ruzindol (min)",
-        "Zdrzanie_Boleraz (min)", "P_Rybnikova", "P_Hospodarska", "P_Kollarova"
-    ]
-
     try:
         df = pd.read_excel("data_trnava_komplet.xlsx")
         df = pd.concat([df, pd.DataFrame([novy_riadok])], ignore_index=True)
     except:
         df = pd.DataFrame([novy_riadok])
 
-    df = df[poradie]
     df.to_excel("data_trnava_komplet.xlsx", index=False)
     
-    df_web = df.tail(12).copy()
+    df_web = df.tail(10).copy()
     vjazdy_cols = [c for c in df_web.columns if "Zdrzanie_" in c]
     ciste_nazvy_vjazdy = [c.replace("Zdrzanie_", "").replace(" (min)", "") for c in vjazdy_cols]
     park_cols = ["P_Rybnikova", "P_Hospodarska", "P_Kollarova"]
 
-    def ofarbi_plynulost_dark(val):
+    def ofarbi_dot(val):
         if isinstance(val, (int, float)):
-            if val >= 90: color = "#00ffa3" # Neónová zelená
-            elif val >= 60: color = "#ffea00" # Neónová žltá
-            else: color = "#ff0055" # Neónová červená
-            return f'<span style="color: {color}; font-weight: 800;">{val}%</span>'
-        return val
+            if val >= 90: return "#4fd1c5" # Teal
+            elif val >= 60: return "#f6ad55" # Orange
+            return "#f56565" # Red
+        return "#e2e8f0"
 
     rows_html = ""
     for _, row in df_web.iterrows():
         icon_class = YR_ICON_MAP.get(row['Ikona'], "bi-cloud")
-        time_display = datetime.strptime(row['Čas zberu'], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
+        t = datetime.strptime(row['Čas zberu'], "%Y-%m-%d %H:%M:%S").strftime("%H:%M")
         
-        rows_html += f"""<tr>
-            <td class="time-cell">{time_display}</td>
-            <td class="temp-cell">{row["Teplota (°C)"]}°</td>
-            <td class="weather-cell"><i class="bi {icon_class}"></i></td>
-            {"".join([f"<td>{ofarbi_plynulost_dark(row[col])}</td>" for col in vjazdy_cols])}
-            {"".join([f"<td><span class='park-val'>{row[col]}</span></td>" for col in park_cols])}
+        rows_html += f"""
+        <tr>
+            <td style="font-weight:600; color:#2d3748;">{t}</td>
+            <td style="font-weight:700;">{row['Teplota (°C)']}°C</td>
+            <td><i class="bi {icon_class}" style="font-size:1.2rem;"></i></td>
+            {"".join([f'<td><span class="status-dot" style="background:{ofarbi_dot(row[col])}"></span>{row[col]}%</td>' for col in vjazdy_cols])}
+            {"".join([f'<td><span class="park-pill">{row[col]}</span></td>' for col in park_cols])}
         </tr>"""
 
     html_content = f"""
@@ -138,90 +130,99 @@ def zber_dat():
     <html lang="sk">
     <head>
         <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-        <title>Trnava Dark Hub</title>
+        <title>Trnava Logip Dashboard</title>
         <style>
-            :root {{
-                --bg: #0b0e14;
-                --card: #161b22;
-                --accent: #7b42ff;
-                --text: #e6edf3;
-                --muted: #8b949e;
-            }}
-            body {{ 
-                background-color: var(--bg); 
-                color: var(--text); 
-                font-family: 'Inter', -apple-system, sans-serif;
-                padding: 20px;
-            }}
-            .glass-card {{
-                background: var(--card);
-                border: 1px solid rgba(255,255,255,0.05);
-                border-radius: 24px;
-                padding: 30px;
-                box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-            }}
-            .header-zone {{ margin-bottom: 30px; }}
-            .brand {{ font-weight: 900; letter-spacing: -1px; font-size: 1.8rem; background: linear-gradient(90deg, #fff, #7b42ff); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-            .status-chip {{ background: rgba(123, 66, 255, 0.1); border: 1px solid var(--accent); color: var(--accent); padding: 6px 16px; border-radius: 100px; font-size: 0.75rem; font-weight: 700; }}
+            body {{ background-color: #f7f9fc; font-family: 'Inter', sans-serif; color: #1a202c; }}
+            .sidebar {{ width: 240px; height: 100vh; background: #fff; position: fixed; padding: 30px 20px; border-right: 1px solid #e2e8f0; }}
+            .main-content {{ margin-left: 240px; padding: 40px; }}
+            .logo {{ font-weight: 800; font-size: 1.5rem; display: flex; align-items: center; gap: 10px; margin-bottom: 50px; }}
+            .nav-link {{ color: #718096; font-weight: 500; padding: 12px 15px; border-radius: 12px; margin-bottom: 5px; display: block; text-decoration: none; }}
+            .nav-link.active {{ background: #f7f9fc; color: #1a202c; }}
+            .nav-link i {{ margin-right: 12px; }}
             
-            .main-table {{ width: 100%; border-collapse: separate; border-spacing: 0 8px; }}
-            .main-table thead th {{ color: var(--muted); font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px; padding: 10px; border: 0; text-align: center; }}
-            .main-table tbody tr {{ background: rgba(255,255,255,0.02); transition: 0.3s; }}
-            .main-table tbody tr:hover {{ background: rgba(255,255,255,0.05); transform: scale(1.005); }}
-            .main-table tbody td {{ padding: 16px 10px; border: 0; font-size: 0.85rem; text-align: center; color: var(--text); }}
-            .main-table tbody td:first-child {{ border-top-left-radius: 12px; border-bottom-left-radius: 12px; }}
-            .main-table tbody td:last-child {{ border-top-right-radius: 12px; border-bottom-right-radius: 12px; }}
+            .header-flex {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }}
+            .card-stat {{ background: #fff; border-radius: 20px; padding: 25px; border: 1px solid #e2e8f0; height: 100%; }}
+            .stat-label {{ color: #718096; font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; display: block; }}
+            .stat-value {{ font-size: 1.8rem; font-weight: 800; }}
             
-            .time-cell {{ color: var(--accent) !important; font-weight: 800; }}
-            .temp-cell {{ font-weight: 700; font-size: 1rem; }}
-            .weather-cell i {{ font-size: 1.4rem; color: #fff; }}
-            .park-val {{ background: #21262d; padding: 4px 10px; border-radius: 6px; font-weight: 700; color: #58a6ff; }}
+            .table-card {{ background: #fff; border-radius: 24px; padding: 30px; border: 1px solid #e2e8f0; margin-top: 30px; }}
+            .custom-table {{ width: 100%; border-collapse: collapse; }}
+            .custom-table th {{ color: #a0aec0; font-size: 0.75rem; text-transform: uppercase; padding: 15px 10px; font-weight: 700; text-align: center; border-bottom: 1px solid #edf2f7; }}
+            .custom-table td {{ padding: 20px 10px; border-bottom: 1px solid #edf2f7; font-size: 0.85rem; text-align: center; }}
             
-            .footer {{ margin-top: 30px; color: var(--muted); font-size: 0.7rem; }}
-            .legend-item {{ display: inline-flex; align-items: center; margin-right: 20px; }}
-            .dot {{ width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }}
+            .status-dot {{ width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 8px; }}
+            .park-pill {{ background: #edf2f7; padding: 5px 12px; border-radius: 8px; font-weight: 700; font-size: 0.8rem; }}
+            .upgrade-box {{ background: #edf2f7; border-radius: 20px; padding: 20px; margin-top: auto; text-align: center; }}
         </style>
     </head>
     <body>
-        <div class="container-fluid">
-            <div class="glass-card">
-                <div class="header-zone d-flex justify-content-between align-items-center flex-wrap gap-3">
-                    <div>
-                        <h1 class="brand">STAKENT® TRNAVA HUB</h1>
-                        <p style="color: var(--muted); margin: 0; font-size: 0.8rem;">Live traffic and infrastructure monitoring</p>
-                    </div>
-                    <div class="status-chip">
-                        <i class="bi bi-broadcast me-2"></i>LIVE: {cas_zberu}
+        <div class="sidebar d-none d-lg-block">
+            <div class="logo"><i class="bi bi-grid-fill text-primary"></i> TT-Logip</div>
+            <a href="#" class="nav-link active"><i class="bi bi-house"></i> Dashboard</a>
+            <a href="#" class="nav-link"><i class="bi bi-map"></i> Mapa mesta</a>
+            <a href="#" class="nav-link"><i class="bi bi-bar-chart"></i> Analýzy</a>
+            <a href="#" class="nav-link"><i class="bi bi-gear"></i> Nastavenia</a>
+            
+            <div class="upgrade-box" style="margin-top: 150px;">
+                <p style="font-weight:700; font-size:0.9rem; margin-bottom:5px;">Trnava Monitor</p>
+                <p style="font-size:0.75rem; color:#718096;">Live dáta z mestskej infraštruktúry</p>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="header-flex">
+                <div>
+                    <h2 style="font-weight:800;">Ahoj, Trnava! 👋</h2>
+                    <p style="color:#718096; margin:0;">Tu je aktuálny stav tvojich ulíc a parkovísk.</p>
+                </div>
+                <div style="text-align:right;">
+                    <span style="font-weight:700;">{cas_dt.strftime("%d. %B %Y")}</span><br>
+                    <span class="badge bg-light text-dark border">{cas_zberu}</span>
+                </div>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">AKTUÁLNA TEPLOTA</span>
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-value">{teplota}°C</div>
+                            <i class="bi {YR_ICON_MAP.get(symbol, 'bi-cloud')}" style="font-size:2rem; color:#4a5568;"></i>
+                        </div>
+                        <span style="color:#4fd1c5; font-size:0.8rem; font-weight:700;">{popis}</span>
                     </div>
                 </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">PARKOVISKO RYBNÍKOVÁ</span>
+                        <div class="stat-value text-primary">{parkoviska['Rybníková']}</div>
+                        <span style="color:#718096; font-size:0.8rem;">voľných miest</span>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card-stat">
+                        <span class="stat-label">NAJHORŠÍ VJAZD</span>
+                        <div class="stat-value" style="color:#f56565;">{min(novy_riadok[c] for c in vjazdy_cols)}%</div>
+                        <span style="color:#718096; font-size:0.8rem;">minimálna plynulosť</span>
+                    </div>
+                </div>
+            </div>
 
+            <div class="table-card">
+                <h5 style="font-weight:800; margin-bottom:25px;">História monitoringu</h5>
                 <div class="table-responsive">
-                    <table class="main-table">
+                    <table class="custom-table">
                         <thead>
                             <tr>
-                                <th class="text-start ps-4">Time</th>
-                                <th>Temp</th>
-                                <th>Sky</th>
+                                <th>Čas</th><th>Teplota</th><th>Obloha</th>
                                 {"".join([f"<th>{n}</th>" for n in ciste_nazvy_vjazdy])}
-                                <th>Rybníková</th><th>Hospodárska</th><th>Kollárova</th>
+                                <th>Rybníková</th><th>Hosp.</th><th>Kollár.</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {rows_html}
-                        </tbody>
+                        <tbody>{rows_html}</tbody>
                     </table>
-                </div>
-
-                <div class="footer d-flex justify-content-between align-items-center flex-wrap">
-                    <div>
-                        <span class="legend-item"><span class="dot" style="background:#00ffa3"></span> Optimal</span>
-                        <span class="legend-item"><span class="dot" style="background:#ffea00"></span> Busy</span>
-                        <span class="legend-item"><span class="dot" style="background:#ff0055"></span> Jam</span>
-                    </div>
-                    <div>Powered by MET Norway & TomTom API</div>
                 </div>
             </div>
         </div>
