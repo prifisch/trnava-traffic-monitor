@@ -9,58 +9,36 @@
             body { background-color: #f8f9fa; font-family: sans-serif; }
             .container-fluid { background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-top: 20px; }
             h2 { color: #2c3e50; font-weight: bold; }
-            .table { font-size: 0.85rem; vertical-align: middle; }
-            .badge { font-size: 0.9rem; }
+            .table { font-size: 0.82rem; vertical-align: middle; }
+            th { font-weight: 600; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; }
         </style>
     </head>
     <body class="p-2 p-md-4">
         <div class="container-fluid">
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4 text-center text-md-start">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-center mb-4">
                 <div>
                     <h2>🚗 Trnava Traffic Dashboard</h2>
-                    <p class="text-muted mb-0">Živý monitoring vjazdov do mesta</p>
                 </div>
-                <div class="mt-2 mt-md-0">
-                    <span class="badge bg-secondary p-2">Posledný zber: 2026-04-27 09:58:48</span>
-                </div>
+                <span class="badge bg-secondary p-2">Posledná aktualizácia: 2026-04-27 10:08:03</span>
             </div>
             <div class="table-responsive">
-                <table border="1" class="dataframe table table-hover table-striped border">
-  <thead>
-    <tr style="text-align: right;">
-      <th>Čas zberu</th>
-      <th>Teplota (°C)</th>
-      <th>Počasie</th>
-      <th>Zdrzanie_Zelenec (min)</th>
-      <th>Zdrzanie_Bucany (min)</th>
-      <th>Zdrzanie_Zavar (min)</th>
-      <th>Zdrzanie_Nitrianska (min)</th>
-      <th>Zdrzanie_Hrnciarovce (min)</th>
-      <th>Zdrzanie_Biely_Kostol (min)</th>
-      <th>Zdrzanie_Sucha (min)</th>
-      <th>Zdrzanie_Spacince (min)</th>
-      <th>Zdrzanie_Ruzindol (min)</th>
-      <th>Zdrzanie_Boleraz (min)</th>
-      <th>volne_rybnikova</th>
-    </tr>
-  </thead>
+                
+    <table class="table table-hover table-striped border text-center">
+        <thead class="table-dark">
+            <tr>
+                <th rowspan="2" class="align-middle">Čas zberu</th>
+                <th rowspan="2" class="align-middle">Teplota</th>
+                <th rowspan="2" class="align-middle">Počasie</th>
+                <th colspan="10" class="border-bottom">Zdržanie (Plynulosť dopravy %)</th>
+                <th rowspan="2" class="align-middle">Parkovisko</th>
+            </tr>
+            <tr>
+                <th>Zelenec</th><th>Bucany</th><th>Zavar</th><th>Nitrianska</th><th>Hrnciarovce</th><th>Biely_Kostol</th><th>Sucha</th><th>Spacince</th><th>Ruzindol</th><th>Boleraz</th>
+            </tr>
+        </thead>
+        <tbody>
+            <table class="dataframe">
   <tbody>
-    <tr>
-      <td>2026-04-25 16:00:02</td>
-      <td>22.01</td>
-      <td>polojasno</td>
-      <td><span class="badge bg-danger">6.9%</span></td>
-      <td><span class="badge bg-danger">11.9%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td><span class="badge bg-danger">nan%</span></td>
-      <td>NaN</td>
-    </tr>
     <tr>
       <td>2026-04-25 19:00:02</td>
       <td>20.81</td>
@@ -259,7 +237,7 @@
       <td>broken clouds</td>
       <td><span class="badge bg-danger">55.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
-      <td><span class="badge bg-warning">64.29%</span></td>
+      <td><span class="badge bg-warning text-dark">64.29%</span></td>
       <td><span class="badge bg-danger">nan%</span></td>
       <td><span class="badge bg-danger">nan%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
@@ -273,11 +251,11 @@
       <td>2026-04-27 08:58:52</td>
       <td>11.45</td>
       <td>scattered clouds</td>
-      <td><span class="badge bg-warning">69.23%</span></td>
+      <td><span class="badge bg-warning text-dark">69.23%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
-      <td><span class="badge bg-warning">61.36%</span></td>
+      <td><span class="badge bg-warning text-dark">61.36%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
@@ -305,11 +283,11 @@
       <td>2026-04-27 09:27:16</td>
       <td>12.56</td>
       <td>scattered clouds</td>
-      <td><span class="badge bg-warning">60.0%</span></td>
+      <td><span class="badge bg-warning text-dark">60.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
-      <td><span class="badge bg-warning">61.36%</span></td>
+      <td><span class="badge bg-warning text-dark">61.36%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
@@ -321,7 +299,7 @@
       <td>2026-04-27 09:45:15</td>
       <td>12.56</td>
       <td>broken clouds</td>
-      <td><span class="badge bg-warning">62.5%</span></td>
+      <td><span class="badge bg-warning text-dark">62.5%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
       <td><span class="badge bg-success">100.0%</span></td>
@@ -365,17 +343,34 @@
       <td><span class="badge bg-success">100.0%</span></td>
       <td>0.0</td>
     </tr>
+    <tr>
+      <td>2026-04-27 10:08:03</td>
+      <td>13.12</td>
+      <td>broken clouds</td>
+      <td><span class="badge bg-danger">57.5%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td><span class="badge bg-success">100.0%</span></td>
+      <td>0.0</td>
+    </tr>
   </tbody>
 </table>
+        </tbody>
+    </table>
+    
             </div>
             <div class="mt-4 p-3 bg-light border rounded">
-                <h6 class="fw-bold">Legenda plynulosti:</h6>
-                <div class="d-flex gap-2 flex-wrap">
-                    <span class="badge bg-success">90-100% (Plynulá doprava)</span>
-                    <span class="badge bg-warning text-dark">60-89% (Zvýšená premávka)</span>
-                    <span class="badge bg-danger">pod 60% (Zápcha)</span>
+                <div class="d-flex gap-3 flex-wrap justify-content-center">
+                    <span class="badge bg-success">90-100% Plynulá</span>
+                    <span class="badge bg-warning text-dark">60-89% Zhustená</span>
+                    <span class="badge bg-danger">pod 60% Zápcha</span>
                 </div>
-                <small class="d-block mt-2 text-muted">* Dáta sú získavané z TomTom Traffic API každú hodinu.</small>
             </div>
         </div>
     </body>
