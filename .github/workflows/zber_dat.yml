@@ -1,19 +1,20 @@
-name: Trnava Data Collector
+name: Trnava Data Collection
 
 on:
   schedule:
-    - cron: '0 * * * *' # Spustí sa každú celú hodinu
-  workflow_dispatch: # Umožní ti spustiť to manuálne tlačidlom
-
-permissions:
-  contents: write # Povolí GitHubu zapisovať súbory (Excel a HTML) späť do tvojho Code
+    # Spúšťa sa každých 10 minút
+    - cron: '*/10 * * * *'
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Umožní ti spustiť zber manuálne tlačidlom v GitHub Actions
 
 jobs:
-  run-collector:
+  build: # TOTO JE TO CHÝBAJÚCE SLOVO
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repozitára
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Nastavenie Pythonu
         uses: actions/setup-python@v4
@@ -24,16 +25,16 @@ jobs:
         run: |
           pip install requests pandas openpyxl pytz
 
-      - name: Spustenie zberu dát
+      - name: Spusti zber dát (Python skript)
         env:
           TOMTOM_KEY: ${{ secrets.TOMTOM_KEY }}
           GOOGLE_MAPS_KEY: ${{ secrets.GOOGLE_MAPS_KEY }}
         run: python pocasie.py
 
-      - name: Uloženie zmien (Excel a HTML)
+      - name: Uloženie zmien (Push do repozitára)
         run: |
-          git config --global user.name "GitHub Action"
-          git config --global user.email "action@github.com"
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git add data_trnava_komplet.xlsx index.html
-          git commit -m "Aktualizácia dát a webu: $(date)" || echo "Žiadne zmeny"
+          git commit -m "Aktualizácia dát a dashboardu: $(date)" || echo "Žiadne zmeny na uloženie"
           git push
