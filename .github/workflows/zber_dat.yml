@@ -1,5 +1,8 @@
 name: Trnava Data Collection
 
+permissions:
+  contents: write
+
 on:
   schedule:
     # Spúšťa sa každých 10 minút
