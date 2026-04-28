@@ -40,4 +40,6 @@ jobs:
           git config --global user.email "actions@github.com"
           git add data_trnava_komplet.xlsx index.html
           git commit -m "Aktualizácia dát a dashboardu: $(date)" || echo "Žiadne zmeny na uloženie"
+          # PRIDANÝ PULL S REBASE: Stiahne zmeny a pridá tvoj commit na vrch
+          git pull --rebase origin main
           git push
