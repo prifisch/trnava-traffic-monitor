@@ -159,8 +159,13 @@ def zber_dat():
                 <div id="map" class="view-section">
                     <h2 class="fw-bold mb-4">Dopravná mapa Trnavy</h2>
                     <div class="card-custom">
-                        <iframe width="100%" height="600" style="border:0" 
-                            src=f"https://www.google.com/maps/embed/v1/directions?key={GOOGLE_MAPS_KEY}&origin=48.3775,17.5883&destination=48.3775,17.5883&mode=driving"
+                        <iframe 
+                            width="100%" 
+                            height="600" 
+                            style="border:0" 
+                            loading="lazy" 
+                            allowfullscreen 
+                            src="https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d42456.456!2d17.58!3d48.37!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1ssk!2ssk!4v123456789&layer=t3{GOOGLE_MAPS_KEY}&q=Trnava+Slovakia&layer=t">
                         </iframe>
                     </div>
                 </div>
