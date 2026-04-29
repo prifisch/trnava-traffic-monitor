@@ -96,39 +96,42 @@ def zber_dat():
     chart_data = [round(df_chart[list(VJAZDY.keys())].iloc[i].mean(), 1) for i in range(len(df_chart))]
 
     rows_html = ""
-    # Prechádzame posledných 15 riadkov od najnovšieho po najstarší
+    # Tail(15) pre zobrazenie posledných dát, .iloc[::-1] ich otočí (najnovšie hore)
     for _, r in df.tail(15).iloc[::-1].iterrows():
-        # Formát času
+        # Formátovanie času
         cas = str(r['Čas']).split(" ")[1][:5] if " " in str(r['Čas']) else str(r['Čas'])[:5]
         
-        # Plynulosť dopravy (farebné guličky)
+        # Plynulosť dopravy s poistkou proti nan
         traffic = ""
         for n in VJAZDY.keys():
-            hodnota = r[n]
-            # Poistka pre nan v doprave
-            if pd.isna(hodnota):
-                traffic += '<td><span class="status-pill" style="background:#eee; color:#999;">-</span></td>'
+            val = r.get(n, 0)
+            if pd.isna(val):
+                traffic += '<td>-</td>'
             else:
-                farba = "status-green" if hodnota > 85 else "status-orange" if hodnota > 60 else "status-red"
-                traffic += f'<td><span class="status-pill {farba}">{int(hodnota)}%</span></td>'
+                pill_class = "status-green" if val > 85 else "status-orange" if val > 60 else "status-red"
+                traffic += f'<td><span class="status-pill {pill_class}">{int(val)}%</span></td>'
 
-        # POISTKA PRE PARKOVANIE (toto opraví tvoj problém s "nan")
-        # Funkcia pd.isna() skontroluje, či je hodnota prázdna
-        p_ryb = f"{int(r['P_Rybníková'])}" if pd.notna(r.get('P_Rybníková')) else "-"
-        p_hos = f"{int(r['P_Hospodárska'])}" if pd.notna(r.get('P_Hospodárska')) else "-"
-        p_kol = f"{int(r['P_Kollárova'])}" if pd.notna(r.get('P_Kollárova')) else "-"
+        # OPRAVA PARKOVANIA: Ak je hodnota nan, daj pomlčku, inak celé číslo
+        def fmt_p(val):
+            try:
+                return str(int(val)) if pd.notna(val) else "-"
+            except:
+                return "-"
 
-        # Poskladanie riadku tabuľky
+        p_ryb = fmt_p(r.get('P_Rybníková'))
+        p_hos = fmt_p(r.get('P_Hospodárska'))
+        p_kol = fmt_p(r.get('P_Kollárova'))
+
         rows_html += f"""
-            <tr>
-                <td class="time-col">{cas}</td>
-                <td class="fw-bold">{r['Teplota']}°C</td>
-                <td><i class="bi {YR_ICON_MAP.get(r['Symbol'], 'bi-cloud')}"></i></td>
-                {traffic}
-                <td>{p_ryb}</td>
-                <td>{p_hos}</td>
-                <td>{p_kol}</td>
-            </tr>"""
+        <tr>
+            <td class="time-col">{cas}</td>
+            <td class="fw-bold">{r.get('Teplota', '-')}°C</td>
+            <td><i class="bi {YR_ICON_MAP.get(r.get('Symbol'), 'bi-cloud')}"></i></td>
+            {traffic}
+            <td>{p_ryb}</td>
+            <td>{p_hos}</td>
+            <td>{p_kol}</td>
+        </tr>"""
 
     # 3. HTML s opraveným JS (zátvorky) a Mapou
     html_content = f"""
