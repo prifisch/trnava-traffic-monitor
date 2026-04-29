@@ -43,26 +43,25 @@ def ziskaj_pocasi_yr():
     except: return 0, "cloudy"
 
 def ziskaj_parkovanie():
-    url = "https://opendata.trnava.sk/api/v1/parkoviska" # Over si aktuálnu URL mesta
+    url = "https://opendata.trnava.sk/api/v1/parkoviska"
+    vysledok = {"Rybníková": None, "Hospodárska": None, "Kollárova": None}
     try:
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        
-        # Vytvoríme čistý slovník, kde predpokladáme 0, ak dáta nie sú
-        vysledok = {"Rybníková": 0, "Hospodárska": 0, "Kollárova": 0}
-        
-        for p in data:
-            nazov = p.get('nazov', '')
-            volne = p.get('volne_miesta', 0)
-            
-            if "Rybníková" in nazov: vysledok["Rybníková"] = volne
-            elif "Hospodárska" in nazov: vysledok["Hospodárska"] = volne
-            elif "Kollárova" in nazov: vysledok["Kollárova"] = volne
-            
+        # Pridali sme 'headers', aby sa server mesta tváril kamarátskejšie
+        response = requests.get(url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+        if response.status_code == 200:
+            data = response.json()
+            for p in data:
+                nazov = p.get('nazov', '')
+                volne = p.get('volne_miesta')
+                
+                # Hľadáme kľúčové slovo v názve (ignorujeme malé/veľké písmená)
+                if "Rybníková" in nazov: vysledok["Rybníková"] = volne
+                elif "Hospodárska" in nazov: vysledok["Hospodárska"] = volne
+                elif "Kollárova" in nazov: vysledok["Kollárova"] = volne
         return vysledok
     except Exception as e:
-        print(f"Chyba parkovania: {e}")
-        return {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
+        print(f"Chyba pripojenia na parkoviská: {e}")
+        return vysledok
 
 # --- HLAVNÁ LOGIKA ---
 
