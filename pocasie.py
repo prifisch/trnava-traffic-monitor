@@ -43,7 +43,7 @@ def ziskaj_pocasi_yr():
     except: return 0, "cloudy"
 
 def ziskaj_parkovanie():
-    url = "https://opendata.trnava.sk/api/v1/parkoviska"
+    url = "https://opendata.trnava.sk/api/v1/parkoviska/obsadenost"
     vysledok = {"Rybníková": None, "Hospodárska": None, "Kollárova": None}
     try:
         # Pridali sme 'headers', aby sa server mesta tváril kamarátskejšie
