@@ -4,6 +4,7 @@ import os
 from datetime import datetime
 import pytz
 import json
+import math
 
 # --- KONFIGURÁCIA ---
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
@@ -42,16 +43,26 @@ def ziskaj_pocasi_yr():
     except: return 0, "cloudy"
 
 def ziskaj_parkovanie():
-    res = {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
+    url = "https://opendata.trnava.sk/api/v1/parkoviska" # Over si aktuálnu URL mesta
     try:
-        data = requests.get("https://opendata.trnava.sk/api/v1/parkings").json()
-        for p in data['features']:
-            name = p['properties']['name']
-            val = p['properties']['free_places']
-            for k in res.keys():
-                if k in name: res[k] = val
-        return res
-    except: return res
+        response = requests.get(url, timeout=10)
+        data = response.json()
+        
+        # Vytvoríme čistý slovník, kde predpokladáme 0, ak dáta nie sú
+        vysledok = {"Rybníková": 0, "Hospodárska": 0, "Kollárova": 0}
+        
+        for p in data:
+            nazov = p.get('nazov', '')
+            volne = p.get('volne_miesta', 0)
+            
+            if "Rybníková" in nazov: vysledok["Rybníková"] = volne
+            elif "Hospodárska" in nazov: vysledok["Hospodárska"] = volne
+            elif "Kollárova" in nazov: vysledok["Kollárova"] = volne
+            
+        return vysledok
+    except Exception as e:
+        print(f"Chyba parkovania: {e}")
+        return {"Rybníková": "N/A", "Hospodárska": "N/A", "Kollárova": "N/A"}
 
 # --- HLAVNÁ LOGIKA ---
 
@@ -85,11 +96,39 @@ def zber_dat():
     chart_data = [round(df_chart[list(VJAZDY.keys())].iloc[i].mean(), 1) for i in range(len(df_chart))]
 
     rows_html = ""
-    # Tail(15) pre zobrazenie posledných dát
+    # Prechádzame posledných 15 riadkov od najnovšieho po najstarší
     for _, r in df.tail(15).iloc[::-1].iterrows():
+        # Formát času
         cas = str(r['Čas']).split(" ")[1][:5] if " " in str(r['Čas']) else str(r['Čas'])[:5]
-        traffic = "".join([f'<td><span class="status-pill {"status-green" if r[n]>85 else "status-orange" if r[n]>60 else "status-red"}">{r[n]}%</span></td>' for n in VJAZDY.keys()])
-        rows_html += f'<tr><td class="time-col">{cas}</td><td class="fw-bold">{r["Teplota"]}°C</td><td><i class="bi {YR_ICON_MAP.get(r["Symbol"], "bi-cloud")}"></i></td>{traffic}<td>{r.get("P_Rybníková","N/A")}</td><td>{r.get("P_Hospodárska","N/A")}</td><td>{r.get("P_Kollárova","N/A")}</td></tr>'
+        
+        # Plynulosť dopravy (farebné guličky)
+        traffic = ""
+        for n in VJAZDY.keys():
+            hodnota = r[n]
+            # Poistka pre nan v doprave
+            if pd.isna(hodnota):
+                traffic += '<td><span class="status-pill" style="background:#eee; color:#999;">-</span></td>'
+            else:
+                farba = "status-green" if hodnota > 85 else "status-orange" if hodnota > 60 else "status-red"
+                traffic += f'<td><span class="status-pill {farba}">{int(hodnota)}%</span></td>'
+
+        # POISTKA PRE PARKOVANIE (toto opraví tvoj problém s "nan")
+        # Funkcia pd.isna() skontroluje, či je hodnota prázdna
+        p_ryb = f"{int(r['P_Rybníková'])}" if pd.notna(r.get('P_Rybníková')) else "-"
+        p_hos = f"{int(r['P_Hospodárska'])}" if pd.notna(r.get('P_Hospodárska')) else "-"
+        p_kol = f"{int(r['P_Kollárova'])}" if pd.notna(r.get('P_Kollárova')) else "-"
+
+        # Poskladanie riadku tabuľky
+        rows_html += f"""
+            <tr>
+                <td class="time-col">{cas}</td>
+                <td class="fw-bold">{r['Teplota']}°C</td>
+                <td><i class="bi {YR_ICON_MAP.get(r['Symbol'], 'bi-cloud')}"></i></td>
+                {traffic}
+                <td>{p_ryb}</td>
+                <td>{p_hos}</td>
+                <td>{p_kol}</td>
+            </tr>"""
 
     # 3. HTML s opraveným JS (zátvorky) a Mapou
     html_content = f"""
