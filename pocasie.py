@@ -52,7 +52,6 @@ def ziskaj_plynulost(zoznam_suradnic):
 def vypocitaj_historicke_normy(df):
     try:
         temp_df = df.copy()
-        # V tvojom Exceli sa stĺpec volá "Čas"
         temp_df['dt'] = pd.to_datetime(temp_df['Čas'])
         temp_df['weekday'] = temp_df['dt'].dt.weekday
         temp_df['time_slot'] = temp_df['dt'].dt.strftime('%H:%M')
@@ -121,10 +120,10 @@ def zber_dat():
     df = df.dropna(subset=['Čas'])
     df.to_excel(excel_file, index=False)
 
-    # 2. Výpočet noriem a príprava grafu
+    # 2. Výpočet noriem a príprava dát pre graf
     historicke_normy = vypocitaj_historicke_normy(df)
     
-    df_chart = df.tail(24) # Posledných 24 záznamov pre graf
+    df_chart = df.tail(24) # Posledných 12 hodín (pri 30min intervale)
     chart_labels = [str(c).split(" ")[1][:5] if " " in str(c) else str(c)[:5] for c in df_chart['Čas']]
     chart_data = [round(df_chart[list(VJAZDY.keys())].iloc[i].mean(), 1) for i in range(len(df_chart))]
 
