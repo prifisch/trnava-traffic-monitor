@@ -10,7 +10,6 @@ import math
 TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 
-# Tvoje spresnené súradnice
 VJAZDY = {
     "Zelenec": "48.355515,17.589294", "Bučany": "48.389916,17.612661", "Zavar": "48.375651,17.621178",
     "B. Kostol": "48.376036,17.565585", "Suchá": "48.389582,17.557863", "Špačince": "48.402741,17.600505",
@@ -36,7 +35,7 @@ def ziskaj_plynulost(suradnice):
 
 def ziskaj_pocasi_yr():
     try:
-        headers = {'User-Agent': 'TrnavaPulse/1.0 (https://github.com/vas-repo)'}
+        headers = {'User-Agent': 'TrnavaPulse/1.0 (https://github.com/prifisch/trnava-traffic-monitor)'}
         res = requests.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=48.37&lon=17.58", headers=headers).json()
         data = res['properties']['timeseries'][0]['data']
         return data['instant']['details']['air_temperature'], data['next_1_hours']['summary']['symbol_code'].split('_')[0]
@@ -46,21 +45,17 @@ def ziskaj_parkovanie():
     url = "https://opendata.trnava.sk/api/v1/parkoviska"
     vysledok = {"Rybníková": None, "Hospodárska": None, "Kollárova": None}
     try:
-        # Pridali sme 'headers', aby sa server mesta tváril kamarátskejšie
         response = requests.get(url, timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
         if response.status_code == 200:
             data = response.json()
             for p in data:
                 nazov = p.get('nazov', '')
                 volne = p.get('volne_miesta')
-                
-                # Hľadáme kľúčové slovo v názve (ignorujeme malé/veľké písmená)
                 if "Rybníková" in nazov: vysledok["Rybníková"] = volne
                 elif "Hospodárska" in nazov: vysledok["Hospodárska"] = volne
                 elif "Kollárova" in nazov: vysledok["Kollárova"] = volne
         return vysledok
-    except Exception as e:
-        print(f"Chyba pripojenia na parkoviská: {e}")
+    except:
         return vysledok
 
 # --- HLAVNÁ LOGIKA ---
@@ -71,7 +66,7 @@ def zber_dat():
     teplota, symbol = ziskaj_pocasi_yr()
     park = ziskaj_parkovanie()
     
-    # 1. Zápis dát
+    # 1. Zápis dát do Excelu
     novy_riadok = {"Čas": teraz.strftime("%Y-%m-%d %H:%M:%S"), "Teplota": teplota, "Symbol": symbol}
     for n, s in VJAZDY.items(): 
         novy_riadok[n] = ziskaj_plynulost(s)
@@ -85,7 +80,6 @@ def zber_dat():
     except: 
         df = pd.DataFrame([novy_riadok])
     
-    # OPRAVA NaN: Vymažeme prázdne riadky a uložíme spat
     df = df.dropna(subset=['Čas'])
     df.to_excel(excel_file, index=False)
 
@@ -95,12 +89,9 @@ def zber_dat():
     chart_data = [round(df_chart[list(VJAZDY.keys())].iloc[i].mean(), 1) for i in range(len(df_chart))]
 
     rows_html = ""
-    # Tail(15) pre zobrazenie posledných dát, .iloc[::-1] ich otočí (najnovšie hore)
     for _, r in df.tail(15).iloc[::-1].iterrows():
-        # Formátovanie času
         cas = str(r['Čas']).split(" ")[1][:5] if " " in str(r['Čas']) else str(r['Čas'])[:5]
         
-        # Plynulosť dopravy s poistkou proti nan
         traffic = ""
         for n in VJAZDY.keys():
             val = r.get(n, 0)
@@ -110,12 +101,9 @@ def zber_dat():
                 pill_class = "status-green" if val > 85 else "status-orange" if val > 60 else "status-red"
                 traffic += f'<td><span class="status-pill {pill_class}">{int(val)}%</span></td>'
 
-        # OPRAVA PARKOVANIA: Ak je hodnota nan, daj pomlčku, inak celé číslo
         def fmt_p(val):
-            try:
-                return str(int(val)) if pd.notna(val) else "-"
-            except:
-                return "-"
+            try: return str(int(val)) if pd.notna(val) else "-"
+            except: return "-"
 
         p_ryb = fmt_p(r.get('P_Rybníková'))
         p_hos = fmt_p(r.get('P_Hospodárska'))
@@ -132,7 +120,38 @@ def zber_dat():
             <td>{p_kol}</td>
         </tr>"""
 
-    # 3. HTML s opraveným JS (zátvorky) a Mapou
+    # --- NOVÁ SEKCIA: PARKING INSIGHTS (Google Live Busyness) ---
+    parking_insights = f"""
+    <div class="row mt-5">
+        <div class="col-12"><h3 class="fw-bold mb-4">Live vyťaženosť parkovísk (Google)</h3></div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Rybníková</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Rybnikova+Trnava">
+                </iframe>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Hospodárska</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Hospodarska+Trnava">
+                </iframe>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Kollárova</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Kollarova+Trnava">
+                </iframe>
+            </div>
+        </div>
+    </div>
+    """
+
+    # 3. HTML Content
     html_content = f"""
     <!DOCTYPE html>
     <html lang="sk">
@@ -195,6 +214,8 @@ def zber_dat():
                             <tbody>{rows_html}</tbody>
                         </table>
                     </div>
+
+                    {parking_insights}
                 </div>
 
                 <div id="map" class="view-section">
@@ -221,7 +242,6 @@ def zber_dat():
         </div>
 
         <script>
-            // OPRAVENÁ FUNKCIA SHOW (vložené do {{ }})
             function show(id, el) {{
                 document.querySelectorAll('.view-section').forEach(function(s) {{
                     s.classList.remove('active');
