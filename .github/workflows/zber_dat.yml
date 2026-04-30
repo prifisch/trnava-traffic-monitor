@@ -6,7 +6,7 @@ permissions:
 on:
   schedule:
     # Spúšťa sa každých 10 minút
-    - cron: '*/10 * * * *'
+    - cron: '*/30 * * * *'
   push:
     branches: [ main ]
   workflow_dispatch: # Umožní ti spustiť zber manuálne tlačidlom v GitHub Actions
