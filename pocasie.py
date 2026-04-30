@@ -120,30 +120,42 @@ def zber_dat():
             <td>{p_kol}</td>
         </tr>"""
 
-    # --- NOVÁ SEKCIA: PARKING INSIGHTS (Google Live Busyness) ---
+# --- NOVÁ SEKCIA: PARKING INSIGHTS (Google Live Busyness) ---
     parking_insights = f"""
     <div class="row mt-5">
         <div class="col-12"><h3 class="fw-bold mb-4">Live vyťaženosť parkovísk (Google)</h3></div>
+        
         <div class="col-md-4 mb-4">
             <div class="card-custom h-100 p-0">
-                <div class="p-3 fw-bold border-bottom">Rybníková</div>
-                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                <div class="p-3 fw-bold border-bottom d-flex justify-content-between align-items-center">
+                    Rybníková
+                    <a href="https://www.google.com/maps/search/?api=1&query=Parkovisko+Rybnikova+Trnava" target="_blank" class="btn btn-sm btn-outline-primary py-0" style="font-size: 10px;">LIVE GRAF</a>
+                </div>
+                <iframe width="100%" height="200" style="border:0" allowfullscreen loading="lazy"
                     src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Rybnikova+Trnava">
                 </iframe>
             </div>
         </div>
+
         <div class="col-md-4 mb-4">
             <div class="card-custom h-100 p-0">
-                <div class="p-3 fw-bold border-bottom">Hospodárska</div>
-                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                <div class="p-3 fw-bold border-bottom d-flex justify-content-between align-items-center">
+                    Hospodárska
+                    <a href="https://www.google.com/maps/search/?api=1&query=Parkovisko+Hospodarska+Trnava" target="_blank" class="btn btn-sm btn-outline-primary py-0" style="font-size: 10px;">LIVE GRAF</a>
+                </div>
+                <iframe width="100%" height="200" style="border:0" allowfullscreen loading="lazy"
                     src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Hospodarska+Trnava">
                 </iframe>
             </div>
         </div>
+
         <div class="col-md-4 mb-4">
             <div class="card-custom h-100 p-0">
-                <div class="p-3 fw-bold border-bottom">Kollárova</div>
-                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                <div class="p-3 fw-bold border-bottom d-flex justify-content-between align-items-center">
+                    Kollárova
+                    <a href="https://www.google.com/maps/search/?api=1&query=Parkovisko+Kollarova+Trnava" target="_blank" class="btn btn-sm btn-outline-primary py-0" style="font-size: 10px;">LIVE GRAF</a>
+                </div>
+                <iframe width="100%" height="200" style="border:0" allowfullscreen loading="lazy"
                     src="https://www.google.com/maps/embed/v1/place?key={GOOGLE_MAPS_KEY}&q=Parkovisko+Kollarova+Trnava">
                 </iframe>
             </div>
