@@ -36,9 +36,16 @@ jobs:
 
       - name: Uloženie zmien (Push do repozitára)
         run: |
-          git config --global user.name "GitHub Actions"
-          git config --global user.email "actions@github.com"
-          git add data_trnava_komplet.xlsx index.html
-          git commit -m "Aktualizácia dát: $(date)" || echo "No changes"
-          git pull --rebase origin main  # TENTO RIADOK JE KĽÚČOVÝ
-          git push
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add data_trnava_komplet.xlsx index.html
+                
+            # Vytvoríme commit
+            git commit -m "Aktualizácia dát: $(date)" || echo "No changes"
+                
+            # Kľúčová zmena: Stiahneme zmeny a v prípade konfliktu v Exceli 
+            # povieme, že naša nová verzia (-X theirs) má prednosť.
+            git fetch origin main
+            git rebase -X theirs origin/main
+                
+            git push origin main          
