@@ -61,6 +61,40 @@ def ziskaj_plynulost(zoznam_suradnic):
         return round(sum(hodnoty) / len(hodnoty), 1)
     return 100.0
 
+def vypocitaj_historicke_normy(df):
+    try:
+        # Prevod na datetime (používame tvoj názov stĺpca "Čas zberu")
+        temp_df = df.copy()
+        temp_df['dt'] = pd.to_datetime(temp_df['Čas zberu'])
+        
+        # Extrakcia dňa v týždni a času
+        temp_df['weekday'] = temp_df['dt'].dt.weekday  # 0=Po, 6=Ne
+        temp_df['time_slot'] = temp_df['dt'].dt.strftime('%H:%M')
+        
+        # Definujeme stĺpce vjazdov (všetky začínajúce na "Zdrzanie_" alebo tvoje kľúče)
+        vjazdy_cols = [col for col in df.columns if col in VJAZDY.keys()]
+        
+        # Ak vjazdy v Exceli nemajú presne názvy z VJAZDY.keys(), 
+        # použijeme tie, ktoré tam sú (napr. Zelenec, Bučany...)
+        if not any(col in temp_df.columns for col in vjazdy_cols):
+             vjazdy_cols = [col for col in VJAZDY.keys() if col in temp_df.columns]
+
+        # Výpočet priemerov
+        # Zoskupíme podľa dňa a času a vypočítame priemernú plynulosť cez všetky vjazdy
+        normy = temp_df.groupby(['weekday', 'time_slot'])[vjazdy_cols].mean().mean(axis=1)
+        
+        # Preformátovanie na slovník pre JavaScript: { "0": {"08:00": 85, ...}, "1": ... }
+        normy_dict = {}
+        for (wd, ts), val in normy.items():
+            wd_str = str(int(wd))
+            if wd_str not in normy_dict: normy_dict[wd_str] = {}
+            normy_dict[wd_str][ts] = round(val, 1)
+            
+        return normy_dict
+    except Exception as e:
+        print(f"Chyba pri výpočte noriem: {e}")
+        return {}
+
 def ziskaj_pocasi_yr():
     try:
         headers = {'User-Agent': 'TrnavaPulse/1.0 (https://github.com/prifisch/trnava-traffic-monitor)'}
@@ -293,21 +327,42 @@ def zber_dat():
                 el.classList.add('active');
             }}
 
-            new Chart(document.getElementById('trafficChart'), {{
-                type: 'line',
-                data: {{
-                    labels: {json.dumps(chart_labels)},
-                    datasets: [{{
-                        label: 'Priemer plynulosti (%)',
-                        data: {json.dumps(chart_data)},
-                        borderColor: '#1a73e8',
-                        fill: true,
-                        backgroundColor: 'rgba(26, 115, 232, 0.1)',
-                        tension: 0.4
-                    }}]
-                }},
-                options: {{ scales: {{ y: {{ min: 0, max: 100 }} }} }}
-            }});
+// Získame dnešný deň v týždni (0-6)
+const todayWD = new Date().getDay() === 0 ? 6 : new Date().getDay() - 1;
+const vsetkyNormy = {json.dumps(historicke_normy)};
+const dnesnaNorma = vsetkyNormy[todayWD] || {};
+
+// Mapovanie noriem na labels, ktoré už máš v grafe
+const historicalDataForChart = {json.dumps(chart_labels)}.map(label => dnesnaNorma[label] || null);
+
+new Chart(document.getElementById('trafficChart'), {{
+    type: 'line',
+    data: {{
+        labels: {json.dumps(chart_labels)},
+        datasets: [
+            {{
+                label: 'Aktuálna plynulosť (%)',
+                data: {json.dumps(chart_data)},
+                borderColor: '#1a73e8',
+                backgroundColor: 'rgba(26, 115, 232, 0.1)',
+                fill: true,
+                tension: 0.4
+            }},
+            {{
+                label: 'Historický priemer (Norma)',
+                data: historicalDataForChart,
+                borderColor: '#bdc3c7',
+                borderDash: [5, 5], // Prerušovaná čiara
+                fill: false,
+                tension: 0.4
+            }}
+        ]
+    }},
+    options: {{ 
+        scales: {{ y: {{ min: 0, max: 100 }} }},
+        plugins: {{ legend: {{ display: true }} }}
+    }}
+}});
         </script>
     </body>
     </html>
