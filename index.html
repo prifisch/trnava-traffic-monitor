@@ -42,7 +42,7 @@
         <div class="main">
             <div class="top-bar">
                 <span class="fw-bold text-primary"><i class="bi bi-circle-fill small me-2"></i> LIVE MONITORING</span>
-                <span class="text-muted small">Aktualizované: 01:40</span>
+                <span class="text-muted small">Aktualizované: 07:10</span>
             </div>
             
             <div class="content">
@@ -58,6 +58,15 @@
                                 </tr>
                             </thead>
                             <tbody>
+        <tr>
+            <td class="time-col">07:10</td>
+            <td class="fw-bold">3.4°C</td>
+            <td><i class="bi bi-sun"></i></td>
+            <td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-orange">64%</span></td><td><span class="status-pill status-green">100%</span></td>
+            <td>-</td>
+            <td>-</td>
+            <td>-</td>
+        </tr>
         <tr>
             <td class="time-col">01:40</td>
             <td class="fw-bold">5.1°C</td>
@@ -183,18 +192,39 @@
             <td>-</td>
             <td>-</td>
             <td>-</td>
-        </tr>
-        <tr>
-            <td class="time-col">13:29</td>
-            <td class="fw-bold">17.8°C</td>
-            <td><i class="bi bi-clouds"></i></td>
-            <td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-green">100%</span></td><td><span class="status-pill status-red">34%</span></td><td><span class="status-pill status-green">100%</span></td>
-            <td>-</td>
-            <td>-</td>
-            <td>-</td>
         </tr></tbody>
                         </table>
                     </div>
+
+                    
+    <div class="row mt-5">
+        <div class="col-12"><h3 class="fw-bold mb-4">Live vyťaženosť parkovísk (Google)</h3></div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Rybníková</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&q=Parkovisko+Rybnikova+Trnava">
+                </iframe>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Hospodárska</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&q=Parkovisko+Hospodarska+Trnava">
+                </iframe>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card-custom h-100 p-0">
+                <div class="p-3 fw-bold border-bottom">Kollárova</div>
+                <iframe width="100%" height="250" style="border:0" allowfullscreen loading="lazy"
+                    src="https://www.google.com/maps/embed/v1/place?key=AIzaSyD7dwm5UituQ4GxwmX1ycI7IzOhikkmgRg&q=Parkovisko+Kollarova+Trnava">
+                </iframe>
+            </div>
+        </div>
+    </div>
+    
                 </div>
 
                 <div id="map" class="view-section">
@@ -221,7 +251,6 @@
         </div>
 
         <script>
-            // OPRAVENÁ FUNKCIA SHOW (vložené do { })
             function show(id, el) {
                 document.querySelectorAll('.view-section').forEach(function(s) {
                     s.classList.remove('active');
@@ -236,10 +265,10 @@
             new Chart(document.getElementById('trafficChart'), {
                 type: 'line',
                 data: {
-                    labels: ["19:56", "23:37", "07:09", "07:12", "07:14", "13:29", "19:25", "23:36", "08:40", "13:58", "13:59", "14:03", "14:07", "14:18", "14:22", "14:24", "14:27", "19:11", "22:44", "01:40"],
+                    labels: ["23:37", "07:09", "07:12", "07:14", "13:29", "19:25", "23:36", "08:40", "13:58", "13:59", "14:03", "14:07", "14:18", "14:22", "14:24", "14:27", "19:11", "22:44", "01:40", "07:10"],
                     datasets: [{
                         label: 'Priemer plynulosti (%)',
-                        data: [100.0, 95.5, 93.0, 95.1, 92.0, 93.4, 99.0, 100.0, 93.5, 94.4, 94.4, 95.2, 93.6, 89.2, 84.4, 89.1, 87.9, 100.0, 95.7, 100.0],
+                        data: [95.5, 93.0, 95.1, 92.0, 93.4, 99.0, 100.0, 93.5, 94.4, 94.4, 95.2, 93.6, 89.2, 84.4, 89.1, 87.9, 100.0, 95.7, 100.0, 96.4],
                         borderColor: '#1a73e8',
                         fill: true,
                         backgroundColor: 'rgba(26, 115, 232, 0.1)',
