@@ -11,10 +11,16 @@ TOMTOM_KEY = os.getenv("TOMTOM_KEY")
 GOOGLE_MAPS_KEY = os.getenv("GOOGLE_MAPS_KEY")
 
 VJAZDY = {
-    "Zelenec": "48.355515,17.589294", "Bučany": "48.389916,17.612661", "Zavar": "48.375651,17.621178",
-    "B. Kostol": "48.376036,17.565585", "Suchá": "48.389582,17.557863", "Špačince": "48.402741,17.600505",
-    "Ružindol": "48.382533,17.562232", "Boleráz": "48.393661,17.562692", "Nitrianska": "48.362222,17.602526",
-    "Hrnčiarovce": "48.351978,17.574577"
+    "Zelenec": ["48.355516,17.589261", "48.356335,17.589057", "48.356964,17.588853"], 
+    "Bučany": ["48.389916,17.612661", "48.388458,17.610547", "48.386428,17.607608"],
+    "Zavar": ["48.375676,17.621206", "48.375335,17.620377", "48.374291,17.618204"]
+    "B. Kostol": ["48.375448,17.564437", "48.376036,17.565585", "48.376354,17.566283"]
+    "Suchá": ["48.388409,17.561065", "48.387410,17.563852", "48.386561,17.566270"]
+    "Špačince": ["48.399354,17.599193", "48.398165,17.600461", "48.396505,17.598135"]
+    "Ružindol": ["48.382510,17.562209", "48.382751,17.563569", "48.383202,17.565539"]
+    "Boleráz": ["48.393661,17.562692", "48.392051,17.564344", "48.390284,17.566275"]
+    "Nitrianska": ["48.360615,17.603516", "48.362222,17.602526", "48.363505,17.601650"]
+    "Hrnčiarovce": ["48.351978,17.574577", "48.355227,17.576304", "48.357388,17.577477"]
 }
 
 YR_ICON_MAP = {
@@ -25,13 +31,35 @@ YR_ICON_MAP = {
 
 # --- FUNKCIE (Zber dát) ---
 
-def ziskaj_plynulost(suradnice):
-    try:
-        url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={suradnice}"
-        res = requests.get(url, timeout=10).json()
-        flow = res.get('flowSegmentData', {})
-        return round((flow.get('currentSpeed', 1) / flow.get('freeFlowSpeed', 1)) * 100, 1)
-    except: return 100
+import time # Nezabudni pridať import na začiatok súboru
+
+def ziskaj_plynulost(zoznam_suradnic):
+    # Ak by si poslal len jeden bod (string), premeníme ho na list, aby kód nezlyhal
+    if isinstance(zoznam_suradnic, str):
+        zoznam_suradnic = [zoznam_suradnic]
+        
+    hodnoty = []
+    for bod in zoznam_suradnic:
+        try:
+            url = f"https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/12/json?key={TOMTOM_KEY}&point={bod}"
+            res = requests.get(url, timeout=10).json()
+            flow = res.get('flowSegmentData', {})
+            
+            # Výpočet: aktuálna rýchlosť / voľná rýchlosť
+            current = flow.get('currentSpeed', 1)
+            free = flow.get('freeFlowSpeed', 1)
+            pomer = (current / free) * 100
+            
+            hodnoty.append(pomer)
+            time.sleep(0.5) # Malá pauza pre stabilitu
+        except Exception as e:
+            print(f"Chyba pri bode {bod}: {e}")
+            continue
+    
+    # Ak máme dáta, vrátime priemer, inak 100
+    if hodnoty:
+        return round(sum(hodnoty) / len(hodnoty), 1)
+    return 100.0
 
 def ziskaj_pocasi_yr():
     try:
